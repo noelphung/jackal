@@ -2,9 +2,38 @@
 
 Skills define *how* tools work. This file is for *your* specifics — the stuff that's unique to your setup.
 
+## Supabase (Direct API)
+
+**Status**: ✅ Full access via service role key
+**Project**: hjupxiwngsxxwvbnwjxx
+**URL**: https://hjupxiwngsxxwvbnwjxx.supabase.co
+
+**How to query**:
+```bash
+curl "https://hjupxiwngsxxwvbnwjxx.supabase.co/rest/v1/TABLE_NAME" \
+  -H "apikey: SERVICE_ROLE_KEY" \
+  -H "Authorization: Bearer SERVICE_ROLE_KEY"
+```
+
+**Key tables**: leads, workspaces, call_sessions, session_stats, user_profiles, ghl_integration_settings, call_kpis, workspace_members, user_twilio_credentials, caller_phone_numbers
+
+**RPC functions**: bulk_import_leads, get_user_context, get_performance_metrics, get_or_create_active_session
+
+---
+
+## Vercel MCP
+
+**Status**: ✅ Full access configured (150 tools)
+**Project**: nextdial
+**URL**: https://nextdial.vercel.app
+
+Access via: `mcporter call vercel.<tool_name>`
+
+---
+
 ## n8n MCP
 
-**Status**: ✅ Full access configured
+**Status**: ✅ Full access configured (20 tools)
 **Instance**: synlixa2.app.n8n.cloud
 **Workflows**: 88 total (many GHL integrations)
 
@@ -40,6 +69,17 @@ Skills define *how* tools work. This file is for *your* specifics — the stuff 
 - Calendar: `contact@synlixa.com`
 - Credential ID: `ldpoEmLmlkmQv7yj` (has read+write)
 
+---
+
+## GitHub (gh CLI)
+
+**Status**: ✅ Authenticated as noelphung
+**Repos**: nextdial (Synlixa cold calling platform)
+
+Commands: `gh repo`, `gh issue`, `gh pr`, `gh run`, `gh api`
+
+---
+
 ## What Goes Here
 
 Things like:
@@ -50,20 +90,7 @@ Things like:
 - Device nicknames
 - Anything environment-specific
 
-## Examples
-
-```markdown
-### Cameras
-- living-room → Main area, 180° wide angle
-- front-door → Entrance, motion-triggered
-
-### SSH
-- home-server → 192.168.1.100, user: admin
-
-### TTS
-- Preferred voice: "Nova" (warm, slightly British)
-- Default speaker: Kitchen HomePod
-```
+---
 
 ## Why Separate?
 
