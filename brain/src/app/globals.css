@@ -143,6 +143,39 @@ body {
   animation: wiggle 0.5s ease-in-out infinite;
 }
 
+/* Emoji-specific animations */
+@keyframes emoji-bounce {
+  0%, 100% { transform: translateY(0) scale(1); }
+  25% { transform: translateY(-6px) scale(1.05); }
+  50% { transform: translateY(0) scale(1); }
+  75% { transform: translateY(-3px) scale(1.02); }
+}
+
+@keyframes emoji-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.1); opacity: 0.85; }
+}
+
+@keyframes emoji-sleep {
+  0%, 100% { transform: rotate(-5deg); }
+  50% { transform: rotate(5deg); }
+}
+
+.emoji-bounce {
+  animation: emoji-bounce 0.8s ease-in-out infinite;
+  display: inline-block;
+}
+
+.emoji-pulse {
+  animation: emoji-pulse 1.5s ease-in-out infinite;
+  display: inline-block;
+}
+
+.emoji-sleep {
+  animation: emoji-sleep 2s ease-in-out infinite;
+  display: inline-block;
+}
+
 /* Tab styles */
 .tab-button {
   padding: 8px 16px;

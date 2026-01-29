@@ -6,14 +6,14 @@ export type AgentState = 'online' | 'working' | 'thinking' | 'idle' | 'sleeping'
 
 export interface AgentStatusData {
   state: AgentState
-  currentTask?: string
+  currentTask: string
   lastActive: string
 }
 
-const stateConfig: Record<AgentState, { emoji: string; label: string; color: string; animation?: string }> = {
+const stateConfig: Record<AgentState, { emoji: string; label: string; color: string }> = {
   online: { emoji: '🟢', label: 'Online', color: '#22c55e' },
-  working: { emoji: '⚡', label: 'Working', color: '#fbbf24', animation: 'bounce' },
-  thinking: { emoji: '🧠', label: 'Thinking', color: '#a855f7', animation: 'pulse' },
+  working: { emoji: '⚡', label: 'Working', color: '#fbbf24' },
+  thinking: { emoji: '🧠', label: 'Thinking', color: '#a855f7' },
   idle: { emoji: '😊', label: 'Idle', color: '#3b82f6' },
   sleeping: { emoji: '😴', label: 'Sleeping', color: '#6b7280' },
 }
@@ -24,27 +24,42 @@ interface AgentStatusProps {
 
 export default function AgentStatus({ compact = false }: AgentStatusProps) {
   const [status, setStatus] = useState<AgentStatusData>({
-    state: 'working',
-    currentTask: 'Building 2nd Brain dashboard',
+    state: 'idle',
+    currentTask: 'Loading...',
     lastActive: new Date().toISOString(),
   })
 
-  // Cycle through states for demo
+  // Fetch real status from API
   useEffect(() => {
-    const states: AgentState[] = ['working', 'thinking', 'online']
-    let idx = 0
-    const interval = setInterval(() => {
-      idx = (idx + 1) % states.length
-      setStatus(prev => ({
-        ...prev,
-        state: states[idx],
-        lastActive: new Date().toISOString(),
-      }))
-    }, 5000)
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch('/api/status', { cache: 'no-store' })
+        if (res.ok) {
+          const data = await res.json()
+          setStatus(data)
+        }
+      } catch (e) {
+        // Fallback to idle on error
+        setStatus(prev => ({ ...prev, state: 'idle', currentTask: 'Ready for tasks' }))
+      }
+    }
+
+    fetchStatus()
+    const interval = setInterval(fetchStatus, 10000) // Poll every 10s
     return () => clearInterval(interval)
   }, [])
 
   const config = stateConfig[status.state]
+  
+  // Get animation class for emoji based on state
+  const getEmojiAnimation = () => {
+    switch (status.state) {
+      case 'working': return 'emoji-bounce'
+      case 'thinking': return 'emoji-pulse'
+      case 'sleeping': return 'emoji-sleep'
+      default: return ''
+    }
+  }
 
   if (compact) {
     return (
@@ -63,10 +78,8 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
           justifyContent: 'center',
           fontSize: '18px',
           border: '1px solid var(--border-card)',
-        }}
-        className={config.animation === 'bounce' ? 'animate-bounce' : config.animation === 'pulse' ? 'animate-pulse' : ''}
-        >
-          🦊
+        }}>
+          <span className={getEmojiAnimation()}>🦊</span>
         </div>
         <div>
           <div style={{ fontSize: '13px', fontWeight: '600' }}>Jackal</div>
@@ -98,7 +111,7 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
       padding: '24px 16px',
       borderBottom: '1px solid var(--border-subtle)',
     }}>
-      {/* Avatar */}
+      {/* Avatar Container */}
       <div style={{
         position: 'relative',
         marginBottom: '16px',
@@ -111,16 +124,20 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          fontSize: '42px',
           boxShadow: `0 4px 20px rgba(0, 0, 0, 0.4), 0 0 30px ${config.color}30`,
           border: `2px solid ${config.color}40`,
           transition: 'all 0.3s ease',
-        }}
-        className={config.animation === 'bounce' ? 'animate-bounce' : config.animation === 'pulse' ? 'animate-pulse-slow' : 'animate-float'}
-        >
-          🦊
+        }}>
+          {/* The emoji itself animates */}
+          <span 
+            style={{ fontSize: '42px', display: 'inline-block' }}
+            className={getEmojiAnimation()}
+          >
+            🦊
+          </span>
         </div>
-        {/* Status ring */}
+        
+        {/* Status indicator badge */}
         <div style={{
           position: 'absolute',
           bottom: '-4px',
@@ -134,27 +151,17 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
           justifyContent: 'center',
           border: '2px solid var(--bg-secondary)',
         }}>
-          <span style={{ fontSize: '14px' }}
-            className={config.animation ? 'animate-bounce' : ''}
-          >{config.emoji}</span>
+          <span style={{ fontSize: '14px' }}>{config.emoji}</span>
         </div>
+        
         {/* Sparkles when working */}
         {status.state === 'working' && (
-          <>
-            <span style={{
-              position: 'absolute',
-              top: '-8px',
-              right: '-8px',
-              fontSize: '16px',
-            }} className="animate-ping-slow">✨</span>
-            <span style={{
-              position: 'absolute',
-              top: '10px',
-              left: '-12px',
-              fontSize: '12px',
-              animationDelay: '0.5s',
-            }} className="animate-ping-slow">⚡</span>
-          </>
+          <span style={{
+            position: 'absolute',
+            top: '-8px',
+            right: '-8px',
+            fontSize: '16px',
+          }} className="animate-ping-slow">✨</span>
         )}
       </div>
 
@@ -207,7 +214,7 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
         maxWidth: '140px',
         lineHeight: '1.4',
       }}>
-        {status.currentTask || 'Ready for tasks'}
+        {status.currentTask}
       </p>
     </div>
   )
