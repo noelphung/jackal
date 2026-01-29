@@ -54,6 +54,8 @@ interface DashboardLayoutProps {
 export default function DashboardLayout({ children, activeTab }: DashboardLayoutProps) {
   const pathname = usePathname()
   const [lastSync, setLastSync] = useState<Date>(new Date())
+  const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [isMobile, setIsMobile] = useState(false)
 
   // Determine active tab from pathname if not provided
   const currentTab = activeTab || (() => {
@@ -67,6 +69,26 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
     return () => clearInterval(interval)
   }, [])
 
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth <= 768)
+      if (window.innerWidth > 768) {
+        setSidebarOpen(false)
+      }
+    }
+    
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
+
+  // Close sidebar when route changes on mobile
+  useEffect(() => {
+    if (isMobile) {
+      setSidebarOpen(false)
+    }
+  }, [pathname, isMobile])
+
   const formatTime = (date: Date) => {
     return date.toLocaleTimeString('en-US', {
       hour: 'numeric',
@@ -75,121 +97,118 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
     })
   }
 
+  const NavLink = ({ item }: { item: NavItem }) => (
+    <Link
+      href={item.href}
+      onClick={() => isMobile && setSidebarOpen(false)}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        padding: '12px 20px',
+        color: currentTab === item.id ? 'var(--text-primary)' : 'var(--text-secondary)',
+        fontSize: '14px',
+        cursor: 'pointer',
+        background: currentTab === item.id ? 'var(--bg-card)' : 'transparent',
+        borderLeft: currentTab === item.id ? '3px solid var(--accent-blue)' : '3px solid transparent',
+        transition: 'all 0.2s',
+        textDecoration: 'none',
+      }}
+    >
+      <span style={{ fontSize: '16px' }}>{item.icon}</span>
+      {item.label}
+    </Link>
+  )
+
+  const SectionLabel = ({ label }: { label: string }) => (
+    <div style={{
+      fontSize: '11px',
+      color: 'var(--text-muted)',
+      textTransform: 'uppercase',
+      letterSpacing: '0.5px',
+      padding: '16px 20px 8px',
+      fontWeight: '600',
+    }}>
+      {label}
+    </div>
+  )
+
   return (
     <div style={{
       display: 'flex',
       height: '100vh',
       background: 'var(--bg-primary)',
+      overflow: 'hidden',
     }}>
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="mobile-overlay active"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Sidebar */}
-      <aside style={{
-        width: '220px',
-        background: 'var(--bg-secondary)',
-        borderRight: '1px solid var(--border-subtle)',
-        display: 'flex',
-        flexDirection: 'column',
-      }}>
+      <aside 
+        className={`sidebar ${sidebarOpen ? 'open' : ''}`}
+        style={{
+          width: isMobile ? '280px' : '220px',
+          maxWidth: isMobile ? '85vw' : undefined,
+          background: 'var(--bg-secondary)',
+          borderRight: '1px solid var(--border-subtle)',
+          display: 'flex',
+          flexDirection: 'column',
+          position: isMobile ? 'fixed' : 'relative',
+          top: 0,
+          left: 0,
+          bottom: 0,
+          zIndex: 100,
+          transform: isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)',
+          transition: 'transform 0.3s ease',
+        }}
+      >
+        {/* Close button on mobile */}
+        {isMobile && (
+          <div style={{
+            display: 'flex',
+            justifyContent: 'flex-end',
+            padding: '12px 16px',
+            borderBottom: '1px solid var(--border-subtle)',
+          }}>
+            <button
+              onClick={() => setSidebarOpen(false)}
+              style={{
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
+                padding: '8px 12px',
+                cursor: 'pointer',
+                color: 'var(--text-secondary)',
+                fontSize: '16px',
+              }}
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
         <AgentStatus />
         
         {/* Main Navigation */}
-        <nav style={{ padding: '16px 0', flex: 1 }}>
-          <div style={{
-            fontSize: '11px',
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            padding: '0 20px 8px',
-          }}>
-            Dashboard
-          </div>
-          {navItems.map(item => (
-            <Link
-              key={item.id}
-              href={item.href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '10px 20px',
-                color: currentTab === item.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontSize: '13px',
-                cursor: 'pointer',
-                background: currentTab === item.id ? 'var(--bg-card)' : 'transparent',
-                borderLeft: currentTab === item.id ? '3px solid var(--accent-blue)' : '3px solid transparent',
-                transition: 'all 0.2s',
-                textDecoration: 'none',
-              }}
-            >
-              <span style={{ fontSize: '14px' }}>{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
+        <nav style={{ 
+          padding: '16px 0', 
+          flex: 1, 
+          overflowY: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        }}>
+          <SectionLabel label="Dashboard" />
+          {navItems.map(item => <NavLink key={item.id} item={item} />)}
 
-          {/* Agent Section */}
-          <div style={{
-            fontSize: '11px',
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            padding: '16px 20px 8px',
-          }}>
-            Agent
-          </div>
-          {agentNavItems.map(item => (
-            <Link
-              key={item.id}
-              href={item.href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '10px 20px',
-                color: currentTab === item.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontSize: '13px',
-                cursor: 'pointer',
-                background: currentTab === item.id ? 'var(--bg-card)' : 'transparent',
-                borderLeft: currentTab === item.id ? '3px solid var(--accent-blue)' : '3px solid transparent',
-                transition: 'all 0.2s',
-                textDecoration: 'none',
-              }}
-            >
-              <span style={{ fontSize: '14px' }}>{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
+          <SectionLabel label="Agent" />
+          {agentNavItems.map(item => <NavLink key={item.id} item={item} />)}
 
-          {/* System Section */}
-          <div style={{
-            fontSize: '11px',
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            padding: '16px 20px 8px',
-          }}>
-            System
-          </div>
-          {systemNavItems.map(item => (
-            <Link
-              key={item.id}
-              href={item.href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '10px 20px',
-                color: currentTab === item.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontSize: '13px',
-                cursor: 'pointer',
-                background: currentTab === item.id ? 'var(--bg-card)' : 'transparent',
-                borderLeft: currentTab === item.id ? '3px solid var(--accent-blue)' : '3px solid transparent',
-                transition: 'all 0.2s',
-                textDecoration: 'none',
-              }}
-            >
-              <span style={{ fontSize: '14px' }}>{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
+          <SectionLabel label="System" />
+          {systemNavItems.map(item => <NavLink key={item.id} item={item} />)}
         </nav>
 
         {/* Bottom Navigation */}
@@ -197,42 +216,13 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
           borderTop: '1px solid var(--border-subtle)',
           padding: '16px 0',
         }}>
-          <div style={{
-            fontSize: '11px',
-            color: 'var(--text-muted)',
-            textTransform: 'uppercase',
-            letterSpacing: '0.5px',
-            padding: '0 20px 8px',
-          }}>
-            Configuration
-          </div>
-          {bottomNavItems.map(item => (
-            <Link
-              key={item.id}
-              href={item.href}
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '10px',
-                padding: '10px 20px',
-                color: currentTab === item.id ? 'var(--text-primary)' : 'var(--text-secondary)',
-                fontSize: '13px',
-                cursor: 'pointer',
-                background: currentTab === item.id ? 'var(--bg-card)' : 'transparent',
-                borderLeft: currentTab === item.id ? '3px solid var(--accent-blue)' : '3px solid transparent',
-                transition: 'all 0.2s',
-                textDecoration: 'none',
-              }}
-            >
-              <span style={{ fontSize: '14px' }}>{item.icon}</span>
-              {item.label}
-            </Link>
-          ))}
+          <SectionLabel label="Configuration" />
+          {bottomNavItems.map(item => <NavLink key={item.id} item={item} />)}
         </nav>
 
         {/* System Status */}
         <div style={{
-          padding: '16px',
+          padding: '16px 20px',
           borderTop: '1px solid var(--border-subtle)',
           fontSize: '11px',
           color: 'var(--text-muted)',
@@ -260,23 +250,47 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        minWidth: 0, // Prevent flex overflow
       }}>
         {/* Header */}
-        <header style={{
+        <header className="header" style={{
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between',
-          padding: '16px 24px',
+          padding: isMobile ? '12px 16px' : '16px 24px',
           borderBottom: '1px solid var(--border-subtle)',
+          gap: '12px',
+          flexShrink: 0,
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <span style={{ fontSize: '24px' }}>🦊</span>
+            {/* Mobile Menu Button */}
+            <button
+              className="mobile-menu-btn"
+              onClick={() => setSidebarOpen(true)}
+              style={{
+                display: isMobile ? 'flex' : 'none',
+                background: 'var(--bg-card)',
+                border: '1px solid var(--border-subtle)',
+                borderRadius: '8px',
+                padding: '10px 12px',
+                cursor: 'pointer',
+                color: 'var(--text-primary)',
+                fontSize: '18px',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              ☰
+            </button>
+
+            <span style={{ fontSize: isMobile ? '20px' : '24px' }}>🦊</span>
             <h1 style={{
-              fontSize: '20px',
+              fontSize: isMobile ? '16px' : '20px',
               fontWeight: '600',
               color: 'var(--text-primary)',
+              whiteSpace: 'nowrap',
             }}>
-              Jackal Dashboard
+              {isMobile ? 'Jackal' : 'Jackal Dashboard'}
             </h1>
             <div style={{
               display: 'flex',
@@ -302,8 +316,8 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
             </div>
           </div>
 
-          <div style={{
-            display: 'flex',
+          <div className="header-right" style={{
+            display: isMobile ? 'none' : 'flex',
             alignItems: 'center',
             gap: '16px',
           }}>
@@ -318,7 +332,11 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
         </header>
 
         {/* Content Area */}
-        <div style={{ flex: 1, overflow: 'auto' }}>
+        <div style={{ 
+          flex: 1, 
+          overflow: 'auto',
+          WebkitOverflowScrolling: 'touch',
+        }}>
           {children}
         </div>
       </main>
