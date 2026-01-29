@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import AgentStatus from './AgentStatus'
 
-type TabType = 'overview' | 'tasks' | 'pipeline' | 'documents' | 'logs' | 'agent' | 'integrations' | 'cron' | 'backups' | 'api-keys' | 'settings'
+type TabType = 'overview' | 'tasks' | 'pipeline' | 'documents' | 'logs' | 'agent' | 'integrations' | 'cron' | 'backups' | 'security' | 'api-keys' | 'settings'
 
 interface NavItem {
   id: TabType
@@ -26,6 +26,7 @@ const systemNavItems: NavItem[] = [
   { id: 'integrations', icon: '🔗', label: 'Integrations', href: '/integrations' },
   { id: 'cron', icon: '⏰', label: 'Cron Jobs', href: '/cron' },
   { id: 'backups', icon: '💾', label: 'Backups', href: '/backups' },
+  { id: 'security', icon: '🔒', label: 'Security', href: '/security' },
 ]
 
 const bottomNavItems: NavItem[] = [
