@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import AgentStatus from './AgentStatus'
 
-type TabType = 'overview' | 'tasks' | 'pipeline' | 'documents' | 'logs' | 'agent' | 'integrations' | 'cron' | 'backups' | 'security' | 'api-keys' | 'settings'
+type TabType = 'overview' | 'tasks' | 'pipeline' | 'documents' | 'logs' | 'sessions' | 'channels' | 'agent' | 'nodes' | 'integrations' | 'cron' | 'backups' | 'security' | 'config' | 'debug' | 'api-keys' | 'settings' | 'docs'
 
 interface NavItem {
   id: TabType
@@ -14,24 +14,36 @@ interface NavItem {
   href: string
 }
 
+// Control section (main dashboard features)
 const navItems: NavItem[] = [
   { id: 'overview', icon: '📊', label: 'Overview', href: '/' },
   { id: 'pipeline', icon: '🚀', label: 'Pipeline', href: '/pipeline' },
+  { id: 'sessions', icon: '💬', label: 'Sessions', href: '/sessions' },
+  { id: 'channels', icon: '📡', label: 'Channels', href: '/channels' },
+]
+
+// Agent section
+const agentNavItems: NavItem[] = [
+  { id: 'agent', icon: '🤖', label: 'Agent', href: '/agent' },
+  { id: 'nodes', icon: '🖥️', label: 'Nodes', href: '/nodes' },
+  { id: 'cron', icon: '⏰', label: 'Cron Jobs', href: '/cron' },
+]
+
+// System section
+const systemNavItems: NavItem[] = [
+  { id: 'integrations', icon: '🔗', label: 'Integrations', href: '/integrations' },
+  { id: 'backups', icon: '💾', label: 'Backups', href: '/backups' },
+  { id: 'security', icon: '🔒', label: 'Security', href: '/security' },
   { id: 'documents', icon: '📄', label: 'Documents', href: '/documents' },
   { id: 'logs', icon: '📝', label: 'Logs', href: '/logs' },
 ]
 
-const systemNavItems: NavItem[] = [
-  { id: 'agent', icon: '🤖', label: 'Agent', href: '/agent' },
-  { id: 'integrations', icon: '🔗', label: 'Integrations', href: '/integrations' },
-  { id: 'cron', icon: '⏰', label: 'Cron Jobs', href: '/cron' },
-  { id: 'backups', icon: '💾', label: 'Backups', href: '/backups' },
-  { id: 'security', icon: '🔒', label: 'Security', href: '/security' },
-]
-
+// Settings section
 const bottomNavItems: NavItem[] = [
+  { id: 'config', icon: '⚙️', label: 'Config', href: '/config' },
+  { id: 'debug', icon: '🔧', label: 'Debug', href: '/debug' },
   { id: 'api-keys', icon: '🔑', label: 'API Keys', href: '/api-keys' },
-  { id: 'settings', icon: '⚙️', label: 'Settings', href: '/settings' },
+  { id: 'docs', icon: '📚', label: 'Docs', href: '/docs' },
 ]
 
 interface DashboardLayoutProps {
@@ -91,6 +103,39 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
             Dashboard
           </div>
           {navItems.map(item => (
+            <Link
+              key={item.id}
+              href={item.href}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px 20px',
+                color: currentTab === item.id ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontSize: '13px',
+                cursor: 'pointer',
+                background: currentTab === item.id ? 'var(--bg-card)' : 'transparent',
+                borderLeft: currentTab === item.id ? '3px solid var(--accent-blue)' : '3px solid transparent',
+                transition: 'all 0.2s',
+                textDecoration: 'none',
+              }}
+            >
+              <span style={{ fontSize: '14px' }}>{item.icon}</span>
+              {item.label}
+            </Link>
+          ))}
+
+          {/* Agent Section */}
+          <div style={{
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            padding: '16px 20px 8px',
+          }}>
+            Agent
+          </div>
+          {agentNavItems.map(item => (
             <Link
               key={item.id}
               href={item.href}
