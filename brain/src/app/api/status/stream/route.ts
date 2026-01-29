@@ -3,17 +3,17 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const SUPABASE_URL = 'https://azxkbejpckpwvwoyljpg.supabase.co'
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6eGtiZWpwY2twd3Z3b3lsanBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NTkxMzIsImV4cCI6MjA4NTEzNTEzMn0.yYhdv8wWAzVORvea1kF5ld1fTV5afQDvHNEWpzSpjSs'
 
-async function getStatus() {
+async function fetchStatus() {
   try {
     const res = await fetch(
       `${SUPABASE_URL}/rest/v1/documents?slug=eq._agent_status&select=content,updated_at`,
       {
         headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
+          'apikey': SUPABASE_ANON_KEY,
+          'Authorization': `Bearer ${SUPABASE_ANON_KEY}`,
         },
         cache: 'no-store',
       }
@@ -21,26 +21,17 @@ async function getStatus() {
     
     if (res.ok) {
       const data = await res.json()
-      if (data && data[0]) {
+      if (data?.[0]?.content) {
         const status = JSON.parse(data[0].content)
-        const updatedAt = new Date(data[0].updated_at)
-        const ageMs = Date.now() - updatedAt.getTime()
-        
-        // If status is older than 3 minutes, return idle
-        if (ageMs > 3 * 60 * 1000) {
-          return {
-            state: 'idle',
-            currentTask: 'Ready for tasks',
-            lastActive: data[0].updated_at,
-            updatedAt: data[0].updated_at,
-          }
-        }
+        const updatedAt = data[0].updated_at
+        const ageMs = Date.now() - new Date(updatedAt).getTime()
+        const isStale = ageMs > 3 * 60 * 1000
         
         return {
-          state: status.state || 'idle',
-          currentTask: status.currentTask || 'Ready for tasks',
-          lastActive: data[0].updated_at,
-          updatedAt: data[0].updated_at,
+          state: isStale ? 'idle' : status.state,
+          currentTask: isStale ? 'Ready for tasks' : status.currentTask,
+          lastActive: updatedAt,
+          updatedAt,
         }
       }
     }
@@ -59,22 +50,19 @@ export async function GET() {
   
   const stream = new ReadableStream({
     async start(controller) {
-      let lastStatus = ''
+      let lastJson = ''
       
-      const sendStatus = async () => {
-        try {
-          const status = await getStatus()
-          const statusStr = JSON.stringify(status)
-          
-          if (statusStr !== lastStatus) {
-            lastStatus = statusStr
-            controller.enqueue(encoder.encode(`data: ${statusStr}\n\n`))
-          }
-        } catch (e) {}
+      const send = async () => {
+        const status = await fetchStatus()
+        const json = JSON.stringify(status)
+        if (json !== lastJson) {
+          lastJson = json
+          controller.enqueue(encoder.encode(`data: ${json}\n\n`))
+        }
       }
       
-      await sendStatus()
-      const interval = setInterval(sendStatus, 3000)
+      await send()
+      const interval = setInterval(send, 2000)
       
       setTimeout(() => {
         clearInterval(interval)
@@ -86,7 +74,7 @@ export async function GET() {
   return new NextResponse(stream, {
     headers: {
       'Content-Type': 'text/event-stream',
-      'Cache-Control': 'no-cache',
+      'Cache-Control': 'no-cache, no-store, must-revalidate',
       'Connection': 'keep-alive',
     },
   })
