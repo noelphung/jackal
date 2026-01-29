@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from 'react'
 import dynamic from 'next/dynamic'
 
-// Dynamic import Lottie to avoid SSR issues
 const Lottie = dynamic(() => import('lottie-react'), { ssr: false })
 
 export type AgentState = 'online' | 'working' | 'thinking' | 'idle' | 'sleeping'
@@ -14,22 +13,13 @@ export interface AgentStatusData {
   lastActive: string
 }
 
-// Animated emoji face Lottie URLs for different states
+// Verified working Lottie animation URLs
 const avatarLottie: Record<AgentState, string> = {
-  working: 'https://assets5.lottiefiles.com/packages/lf20_aZTdD5.json', // excited working face
-  thinking: 'https://assets2.lottiefiles.com/packages/lf20_n2m0isqr.json', // thinking face
-  idle: 'https://assets9.lottiefiles.com/packages/lf20_kkflmtur.json', // happy winking face
-  sleeping: 'https://assets3.lottiefiles.com/packages/lf20_twijbubv.json', // sleeping zzz
-  online: 'https://assets9.lottiefiles.com/packages/lf20_kkflmtur.json', // happy face
-}
-
-// Fallback to simpler animations if above don't load
-const fallbackLottie: Record<AgentState, string> = {
-  working: 'https://lottie.host/embed/7c491c6d-5e10-4045-a0dc-bf02f81e435a/OQPCqF5rqC.json',
-  thinking: 'https://lottie.host/embed/e90e7ba8-a959-4d26-aa2c-1c8f51aa6bf8/uxA1z3k3Ol.json',
-  idle: 'https://lottie.host/embed/38f9a9a9-80f6-4ea4-b3e2-8a5b29ef9a12/x5dUXvfhlx.json',
-  sleeping: 'https://lottie.host/embed/3d8ac0ba-98d9-4c53-a7e8-17f1a2e70a1e/1r8dN07J4z.json',
-  online: 'https://lottie.host/embed/38f9a9a9-80f6-4ea4-b3e2-8a5b29ef9a12/x5dUXvfhlx.json',
+  working: 'https://assets2.lottiefiles.com/packages/lf20_uwR49r.json',
+  thinking: 'https://assets6.lottiefiles.com/packages/lf20_au98spwy.json',
+  idle: 'https://assets9.lottiefiles.com/packages/lf20_kkflmtur.json',
+  sleeping: 'https://assets2.lottiefiles.com/packages/lf20_1cazwtnc.json',
+  online: 'https://assets9.lottiefiles.com/packages/lf20_kkflmtur.json',
 }
 
 const stateConfig: Record<AgentState, { emoji: string; label: string; color: string }> = {
@@ -40,11 +30,7 @@ const stateConfig: Record<AgentState, { emoji: string; label: string; color: str
   sleeping: { emoji: '😴', label: 'Sleeping', color: '#6b7280' },
 }
 
-interface AgentStatusProps {
-  compact?: boolean
-}
-
-export default function AgentStatus({ compact = false }: AgentStatusProps) {
+export default function AgentStatus({ compact = false }: { compact?: boolean }) {
   const [status, setStatus] = useState<AgentStatusData>({
     state: 'idle',
     currentTask: 'Connecting...',
@@ -60,9 +46,7 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
       const eventSource = new EventSource('/api/status/stream')
       eventSourceRef.current = eventSource
       
-      eventSource.onopen = () => {
-        setIsConnected(true)
-      }
+      eventSource.onopen = () => setIsConnected(true)
       
       eventSource.onmessage = (event) => {
         try {
@@ -74,89 +58,72 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
       eventSource.onerror = () => {
         setIsConnected(false)
         eventSource.close()
-        // Reconnect after 3 seconds
         setTimeout(connect, 3000)
       }
     }
     
     connect()
-    
-    return () => {
-      eventSourceRef.current?.close()
-    }
+    return () => eventSourceRef.current?.close()
   }, [])
 
-  // Load Lottie animation when state changes
+  // Load Lottie animation
   useEffect(() => {
-    const loadAnimation = async () => {
-      const url = avatarLottie[status.state]
-      try {
-        const res = await fetch(url)
-        if (res.ok) {
-          const data = await res.json()
-          setLottieData(data)
-        } else {
-          throw new Error('Primary failed')
-        }
-      } catch {
-        // Try fallback
-        try {
-          const fallbackUrl = fallbackLottie[status.state]
-          const res = await fetch(fallbackUrl)
-          if (res.ok) {
-            const data = await res.json()
-            setLottieData(data)
-          }
-        } catch {
-          setLottieData(null)
-        }
-      }
-    }
-    
-    loadAnimation()
+    const url = avatarLottie[status.state]
+    fetch(url)
+      .then(res => res.json())
+      .then(data => setLottieData(data))
+      .catch(() => setLottieData(null))
   }, [status.state])
 
   const config = stateConfig[status.state]
 
+  // Fallback animated emoji when Lottie fails
+  const FallbackEmoji = () => (
+    <span 
+      style={{ 
+        fontSize: compact ? '24px' : '50px',
+        display: 'inline-block',
+        animation: status.state === 'working' 
+          ? 'bounce 0.6s ease-in-out infinite' 
+          : status.state === 'thinking'
+          ? 'pulse 1.5s ease-in-out infinite'
+          : 'float 3s ease-in-out infinite'
+      }}
+    >
+      {status.state === 'sleeping' ? '😴' : status.state === 'working' ? '🤩' : status.state === 'thinking' ? '🤔' : '😊'}
+    </span>
+  )
+
   if (compact) {
     return (
-      <div style={{
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-      }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
         <div style={{
-          width: '36px',
-          height: '36px',
-          borderRadius: '10px',
+          width: '40px',
+          height: '40px',
+          borderRadius: '12px',
           background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          border: `2px solid ${config.color}40`,
+          border: `2px solid ${config.color}50`,
         }}>
           {lottieData ? (
-            <Lottie animationData={lottieData} loop={true} style={{ width: 32, height: 32 }} />
+            <Lottie animationData={lottieData} loop style={{ width: 36, height: 36 }} />
           ) : (
-            <span style={{ fontSize: '20px' }} className="emoji-bounce">😊</span>
+            <FallbackEmoji />
           )}
         </div>
         <div>
-          <div style={{ fontSize: '13px', fontWeight: '600' }}>Jackal</div>
-          <div style={{ 
-            fontSize: '11px', 
-            color: config.color,
-            display: 'flex',
-            alignItems: 'center',
-            gap: '4px',
-          }}>
+          <div style={{ fontSize: '13px', fontWeight: '600', color: '#fafafa' }}>Jackal</div>
+          <div style={{ fontSize: '11px', color: config.color, display: 'flex', alignItems: 'center', gap: '4px' }}>
             <span style={{
               width: '6px',
               height: '6px',
               borderRadius: '50%',
               background: isConnected ? config.color : '#ef4444',
-            }} className="animate-pulse" />
+              animation: 'pulse 2s ease-in-out infinite',
+            }} />
             {config.label}
           </div>
         </div>
@@ -170,110 +137,90 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
       flexDirection: 'column',
       alignItems: 'center',
       padding: '24px 16px',
-      borderBottom: '1px solid var(--border-subtle)',
+      borderBottom: '1px solid rgba(255,255,255,0.06)',
     }}>
-      {/* Animated Avatar */}
-      <div style={{
-        position: 'relative',
-        marginBottom: '16px',
-      }}>
+      {/* Avatar */}
+      <div style={{ position: 'relative', marginBottom: '16px' }}>
         <div style={{
           width: '90px',
           height: '90px',
-          borderRadius: '22px',
+          borderRadius: '24px',
           background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          boxShadow: `0 4px 24px rgba(0, 0, 0, 0.5), 0 0 40px ${config.color}25`,
-          border: `3px solid ${config.color}50`,
+          boxShadow: `0 8px 32px rgba(0,0,0,0.5), 0 0 60px ${config.color}20`,
+          border: `3px solid ${config.color}60`,
           transition: 'all 0.3s ease',
         }}>
           {lottieData ? (
-            <Lottie 
-              animationData={lottieData} 
-              loop={true} 
-              style={{ width: 80, height: 80 }} 
-            />
+            <Lottie animationData={lottieData} loop style={{ width: 80, height: 80 }} />
           ) : (
-            <span style={{ fontSize: '50px' }} className="emoji-bounce">😊</span>
+            <FallbackEmoji />
           )}
         </div>
         
-        {/* Live connection indicator */}
+        {/* Connection indicator */}
         <div style={{
           position: 'absolute',
-          top: '-2px',
-          right: '-2px',
-          width: '18px',
-          height: '18px',
+          top: '-4px',
+          right: '-4px',
+          width: '20px',
+          height: '20px',
           borderRadius: '50%',
-          background: isConnected ? 'var(--accent-green)' : '#ef4444',
-          border: '3px solid var(--bg-secondary)',
-          boxShadow: isConnected ? '0 0 12px var(--accent-green)' : '0 0 12px #ef4444',
-        }} className="animate-pulse" />
+          background: isConnected ? '#22c55e' : '#ef4444',
+          border: '3px solid #141418',
+          boxShadow: `0 0 12px ${isConnected ? '#22c55e' : '#ef4444'}`,
+          animation: 'pulse 2s ease-in-out infinite',
+        }} />
         
-        {/* Sparkles when working */}
         {status.state === 'working' && (
-          <>
-            <span style={{
-              position: 'absolute',
-              top: '-10px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              fontSize: '16px',
-            }} className="animate-ping-slow">✨</span>
-          </>
+          <span style={{
+            position: 'absolute',
+            top: '-12px',
+            left: '50%',
+            transform: 'translateX(-50%)',
+            fontSize: '18px',
+            animation: 'ping 1.5s ease-in-out infinite',
+          }}>✨</span>
         )}
       </div>
 
-      {/* Name */}
-      <h2 style={{
-        fontSize: '18px',
-        fontWeight: '600',
-        color: 'var(--text-primary)',
-        marginBottom: '8px',
-      }}>
+      <h2 style={{ fontSize: '18px', fontWeight: '600', color: '#fafafa', marginBottom: '8px' }}>
         Jackal
       </h2>
 
-      {/* Status Indicator */}
       <div style={{
         display: 'flex',
         alignItems: 'center',
         gap: '6px',
-        padding: '4px 12px',
-        borderRadius: '12px',
-        background: `${config.color}15`,
-        border: `1px solid ${config.color}30`,
+        padding: '6px 14px',
+        borderRadius: '14px',
+        background: `${config.color}20`,
+        border: `1px solid ${config.color}40`,
         marginBottom: '12px',
-        transition: 'all 0.3s ease',
       }}>
         <span style={{
           width: '8px',
           height: '8px',
           borderRadius: '50%',
           background: config.color,
-          boxShadow: `0 0 8px ${config.color}`,
-        }} className="animate-pulse" />
-        <span style={{
-          fontSize: '13px',
-          color: config.color,
-          fontWeight: '500',
-        }}>
+          boxShadow: `0 0 10px ${config.color}`,
+          animation: 'pulse 2s ease-in-out infinite',
+        }} />
+        <span style={{ fontSize: '13px', color: config.color, fontWeight: '500' }}>
           {config.label}
         </span>
       </div>
 
-      {/* Current Task */}
       <p style={{
         fontSize: '12px',
-        color: 'var(--text-muted)',
+        color: '#71717a',
         textAlign: 'center',
         fontFamily: "'JetBrains Mono', monospace",
         maxWidth: '150px',
-        lineHeight: '1.4',
+        lineHeight: '1.5',
       }}>
         {status.currentTask}
       </p>

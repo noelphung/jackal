@@ -1,30 +1,48 @@
 import { NextResponse } from 'next/server'
-import fs from 'fs'
 
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const STATUS_FILE = '/home/ubuntu/clawd/brain-docs/.jackal-status.json'
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-function getStatus() {
+async function getStatus() {
   try {
-    if (fs.existsSync(STATUS_FILE)) {
-      const data = fs.readFileSync(STATUS_FILE, 'utf-8')
-      const status = JSON.parse(data)
-      
-      // Check if stale (>2 minutes = idle)
-      const updatedAt = new Date(status.updatedAt)
-      const ageMs = Date.now() - updatedAt.getTime()
-      
-      if (ageMs > 2 * 60 * 1000) {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/documents?slug=eq._agent_status&select=content,updated_at`,
+      {
+        headers: {
+          apikey: SUPABASE_KEY,
+          Authorization: `Bearer ${SUPABASE_KEY}`,
+        },
+        cache: 'no-store',
+      }
+    )
+    
+    if (res.ok) {
+      const data = await res.json()
+      if (data && data[0]) {
+        const status = JSON.parse(data[0].content)
+        const updatedAt = new Date(data[0].updated_at)
+        const ageMs = Date.now() - updatedAt.getTime()
+        
+        // If status is older than 3 minutes, return idle
+        if (ageMs > 3 * 60 * 1000) {
+          return {
+            state: 'idle',
+            currentTask: 'Ready for tasks',
+            lastActive: data[0].updated_at,
+            updatedAt: data[0].updated_at,
+          }
+        }
+        
         return {
-          state: 'idle',
-          currentTask: 'Ready for tasks',
-          lastActive: status.lastActive,
-          updatedAt: status.updatedAt,
+          state: status.state || 'idle',
+          currentTask: status.currentTask || 'Ready for tasks',
+          lastActive: data[0].updated_at,
+          updatedAt: data[0].updated_at,
         }
       }
-      return status
     }
   } catch (e) {}
   
@@ -43,28 +61,21 @@ export async function GET() {
     async start(controller) {
       let lastStatus = ''
       
-      const sendStatus = () => {
+      const sendStatus = async () => {
         try {
-          const status = getStatus()
+          const status = await getStatus()
           const statusStr = JSON.stringify(status)
           
-          // Only send if changed
           if (statusStr !== lastStatus) {
             lastStatus = statusStr
             controller.enqueue(encoder.encode(`data: ${statusStr}\n\n`))
           }
-        } catch (e) {
-          // Ignore errors
-        }
+        } catch (e) {}
       }
       
-      // Send initial status
-      sendStatus()
+      await sendStatus()
+      const interval = setInterval(sendStatus, 3000)
       
-      // Poll every 2 seconds for changes
-      const interval = setInterval(sendStatus, 2000)
-      
-      // Clean up after 5 minutes (client should reconnect)
       setTimeout(() => {
         clearInterval(interval)
         controller.close()
