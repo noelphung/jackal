@@ -14,13 +14,22 @@ export interface AgentStatusData {
   lastActive: string
 }
 
-// Free Lottie animation URLs for different states
-const lottieUrls: Record<AgentState, string> = {
-  working: 'https://lottie.host/4db68bbd-31f6-4cd8-84eb-189571aa4678/7PXQrjHjSI.json', // lightning/energy
-  thinking: 'https://lottie.host/c7af3a88-fdc7-4706-bc93-7adf16948b80/aMSGsXjnXb.json', // brain/thinking
-  idle: 'https://lottie.host/413e81ee-2d0e-4bf0-b25e-16de2d1a0eff/VgQ2tLqGRE.json', // happy face
-  sleeping: 'https://lottie.host/6d93e329-4803-4ce3-b660-2e5789d1fc3d/G3QfBMxcZh.json', // sleeping
-  online: 'https://lottie.host/413e81ee-2d0e-4bf0-b25e-16de2d1a0eff/VgQ2tLqGRE.json', // happy face
+// Animated emoji face Lottie URLs for different states
+const avatarLottie: Record<AgentState, string> = {
+  working: 'https://assets5.lottiefiles.com/packages/lf20_aZTdD5.json', // excited working face
+  thinking: 'https://assets2.lottiefiles.com/packages/lf20_n2m0isqr.json', // thinking face
+  idle: 'https://assets9.lottiefiles.com/packages/lf20_kkflmtur.json', // happy winking face
+  sleeping: 'https://assets3.lottiefiles.com/packages/lf20_twijbubv.json', // sleeping zzz
+  online: 'https://assets9.lottiefiles.com/packages/lf20_kkflmtur.json', // happy face
+}
+
+// Fallback to simpler animations if above don't load
+const fallbackLottie: Record<AgentState, string> = {
+  working: 'https://lottie.host/embed/7c491c6d-5e10-4045-a0dc-bf02f81e435a/OQPCqF5rqC.json',
+  thinking: 'https://lottie.host/embed/e90e7ba8-a959-4d26-aa2c-1c8f51aa6bf8/uxA1z3k3Ol.json',
+  idle: 'https://lottie.host/embed/38f9a9a9-80f6-4ea4-b3e2-8a5b29ef9a12/x5dUXvfhlx.json',
+  sleeping: 'https://lottie.host/embed/3d8ac0ba-98d9-4c53-a7e8-17f1a2e70a1e/1r8dN07J4z.json',
+  online: 'https://lottie.host/embed/38f9a9a9-80f6-4ea4-b3e2-8a5b29ef9a12/x5dUXvfhlx.json',
 }
 
 const stateConfig: Record<AgentState, { emoji: string; label: string; color: string }> = {
@@ -79,13 +88,32 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
 
   // Load Lottie animation when state changes
   useEffect(() => {
-    const url = lottieUrls[status.state]
-    if (url) {
-      fetch(url)
-        .then(res => res.json())
-        .then(data => setLottieData(data))
-        .catch(() => setLottieData(null))
+    const loadAnimation = async () => {
+      const url = avatarLottie[status.state]
+      try {
+        const res = await fetch(url)
+        if (res.ok) {
+          const data = await res.json()
+          setLottieData(data)
+        } else {
+          throw new Error('Primary failed')
+        }
+      } catch {
+        // Try fallback
+        try {
+          const fallbackUrl = fallbackLottie[status.state]
+          const res = await fetch(fallbackUrl)
+          if (res.ok) {
+            const data = await res.json()
+            setLottieData(data)
+          }
+        } catch {
+          setLottieData(null)
+        }
+      }
     }
+    
+    loadAnimation()
   }, [status.state])
 
   const config = stateConfig[status.state]
@@ -98,20 +126,20 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
         gap: '8px',
       }}>
         <div style={{
-          width: '32px',
-          height: '32px',
-          borderRadius: '8px',
+          width: '36px',
+          height: '36px',
+          borderRadius: '10px',
           background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          border: '1px solid var(--border-card)',
+          border: `2px solid ${config.color}40`,
         }}>
           {lottieData ? (
-            <Lottie animationData={lottieData} loop={true} style={{ width: 28, height: 28 }} />
+            <Lottie animationData={lottieData} loop={true} style={{ width: 32, height: 32 }} />
           ) : (
-            <span style={{ fontSize: '18px' }}>🦊</span>
+            <span style={{ fontSize: '20px' }} className="emoji-bounce">😊</span>
           )}
         </div>
         <div>
@@ -144,64 +172,60 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
       padding: '24px 16px',
       borderBottom: '1px solid var(--border-subtle)',
     }}>
-      {/* Avatar Container with Lottie */}
+      {/* Animated Avatar */}
       <div style={{
         position: 'relative',
         marginBottom: '16px',
       }}>
         <div style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '20px',
+          width: '90px',
+          height: '90px',
+          borderRadius: '22px',
           background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           overflow: 'hidden',
-          boxShadow: `0 4px 20px rgba(0, 0, 0, 0.4), 0 0 30px ${config.color}30`,
-          border: `2px solid ${config.color}40`,
+          boxShadow: `0 4px 24px rgba(0, 0, 0, 0.5), 0 0 40px ${config.color}25`,
+          border: `3px solid ${config.color}50`,
           transition: 'all 0.3s ease',
         }}>
           {lottieData ? (
             <Lottie 
               animationData={lottieData} 
               loop={true} 
-              style={{ width: 70, height: 70 }} 
+              style={{ width: 80, height: 80 }} 
             />
           ) : (
-            <span style={{ fontSize: '42px' }}>🦊</span>
+            <span style={{ fontSize: '50px' }} className="emoji-bounce">😊</span>
           )}
         </div>
         
-        {/* Connection indicator */}
+        {/* Live connection indicator */}
         <div style={{
           position: 'absolute',
-          top: '-4px',
-          right: '-4px',
-          width: '16px',
-          height: '16px',
+          top: '-2px',
+          right: '-2px',
+          width: '18px',
+          height: '18px',
           borderRadius: '50%',
           background: isConnected ? 'var(--accent-green)' : '#ef4444',
-          border: '2px solid var(--bg-secondary)',
-          boxShadow: isConnected ? '0 0 8px var(--accent-green)' : '0 0 8px #ef4444',
+          border: '3px solid var(--bg-secondary)',
+          boxShadow: isConnected ? '0 0 12px var(--accent-green)' : '0 0 12px #ef4444',
         }} className="animate-pulse" />
         
-        {/* Status badge */}
-        <div style={{
-          position: 'absolute',
-          bottom: '-4px',
-          right: '-4px',
-          width: '24px',
-          height: '24px',
-          borderRadius: '50%',
-          background: 'var(--bg-secondary)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          border: '2px solid var(--bg-secondary)',
-        }}>
-          <span style={{ fontSize: '14px' }}>{config.emoji}</span>
-        </div>
+        {/* Sparkles when working */}
+        {status.state === 'working' && (
+          <>
+            <span style={{
+              position: 'absolute',
+              top: '-10px',
+              left: '50%',
+              transform: 'translateX(-50%)',
+              fontSize: '16px',
+            }} className="animate-ping-slow">✨</span>
+          </>
+        )}
       </div>
 
       {/* Name */}
@@ -248,7 +272,7 @@ export default function AgentStatus({ compact = false }: AgentStatusProps) {
         color: 'var(--text-muted)',
         textAlign: 'center',
         fontFamily: "'JetBrains Mono', monospace",
-        maxWidth: '140px',
+        maxWidth: '150px',
         lineHeight: '1.4',
       }}>
         {status.currentTask}
