@@ -86,3 +86,13 @@ curl -X POST "https://azxkbejpckpwvwoyljpg.supabase.co/rest/v1/documents" \
 - Completing tasks
 - Adding memory entries
 - Creating new documents
+
+**Automatic syncing**:
+- GitHub: Every 5 minutes via cron (auto-commit if changes)
+- Supabase: Manual via `./scripts/sync-brain.sh $KEY` (key required per session)
+- Full sync: `./scripts/sync-brain.sh $KEY` pushes to both GitHub + Supabase
+
+**File watcher** (optional realtime):
+```bash
+nohup ./scripts/watch-and-sync.sh $KEY &
+```
