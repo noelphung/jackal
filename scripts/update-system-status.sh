@@ -2,9 +2,15 @@
 # Update system status in Supabase for dashboard
 # Run via cron or heartbeat
 
+# Try arg first, then secrets.env
 KEY="$1"
+if [ -z "$KEY" ] && [ -f /home/ubuntu/clawd/secrets.env ]; then
+    source /home/ubuntu/clawd/secrets.env
+    KEY="$BRAIN2_KEY"
+fi
+
 if [ -z "$KEY" ]; then
-    echo "Usage: $0 <supabase_key>"
+    echo "No key found (pass as arg or set in secrets.env)"
     exit 1
 fi
 

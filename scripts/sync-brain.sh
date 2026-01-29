@@ -1,13 +1,19 @@
 #!/bin/bash
 # Sync Jackal's brain to GitHub and Supabase
 # Usage: ./sync-brain.sh [supabase_key]
-# If key not provided, only syncs to GitHub
+# If key not provided, tries secrets.env, then GitHub only
 
 set -e
 cd /home/ubuntu/clawd
 
 SUPABASE_URL="https://azxkbejpckpwvwoyljpg.supabase.co/rest/v1/documents"
+
+# Try arg first, then secrets.env
 KEY="$1"
+if [ -z "$KEY" ] && [ -f /home/ubuntu/clawd/secrets.env ]; then
+    source /home/ubuntu/clawd/secrets.env
+    KEY="$BRAIN2_KEY"
+fi
 
 echo "🦊 Syncing Jackal's brain..."
 
