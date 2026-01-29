@@ -1,72 +1,183 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { DocumentMeta, DocumentType } from '@/types/document';
+import { useState } from 'react'
+import { Document, DocumentMeta } from '@/types/document'
 
-interface DocumentListProps {
-  documents: DocumentMeta[];
-  type: DocumentType;
-  title: string;
-  icon: string;
-  description: string;
+const typeIcons: Record<string, { icon: string; color: string }> = {
+  journal: { icon: '📓', color: '#3b82f6' },
+  concept: { icon: '💡', color: '#fbbf24' },
+  note: { icon: '📝', color: '#22c55e' },
+  project: { icon: '🚀', color: '#a855f7' },
 }
 
-export default function DocumentList({ documents, type, title, icon, description }: DocumentListProps) {
-  const basePath = `/${type}s`;
+interface DocumentListProps {
+  documents: DocumentMeta[]
+  selectedId?: string
+  onSelect: (doc: DocumentMeta) => void
+  filter?: string
+}
+
+export default function DocumentList({ documents, selectedId, onSelect, filter }: DocumentListProps) {
+  const [typeFilter, setTypeFilter] = useState<string | null>(filter || null)
+
+  const filtered = typeFilter 
+    ? documents.filter(d => d.type === typeFilter)
+    : documents
+
+  const formatDate = (date: Date) => {
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / 60000)
+    const diffHours = Math.floor(diffMs / 3600000)
+    const diffDays = Math.floor(diffMs / 86400000)
+
+    if (diffMins < 60) return `${diffMins}m ago`
+    if (diffHours < 24) return `${diffHours}h ago`
+    if (diffDays < 7) return `${diffDays}d ago`
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+  }
 
   return (
-    <div className="p-8 max-w-4xl mx-auto">
-      {/* Header */}
-      <div className="mb-8">
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-3xl">{icon}</span>
-          <h1 className="text-3xl font-bold">{title}</h1>
-        </div>
-        <p className="text-[hsl(var(--muted-foreground))]">{description}</p>
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      height: '100%',
+    }}>
+      {/* Filter tabs */}
+      <div style={{
+        display: 'flex',
+        gap: '8px',
+        padding: '12px 16px',
+        borderBottom: '1px solid var(--border-subtle)',
+        overflowX: 'auto',
+      }}>
+        <button
+          onClick={() => setTypeFilter(null)}
+          style={{
+            padding: '6px 12px',
+            borderRadius: '8px',
+            border: 'none',
+            background: !typeFilter ? 'var(--bg-card-hover)' : 'transparent',
+            color: !typeFilter ? 'var(--text-primary)' : 'var(--text-muted)',
+            fontSize: '12px',
+            fontWeight: '500',
+            cursor: 'pointer',
+            transition: 'all 0.2s',
+          }}
+        >
+          All ({documents.length})
+        </button>
+        {Object.entries(typeIcons).map(([type, { icon }]) => {
+          const count = documents.filter(d => d.type === type).length
+          if (count === 0) return null
+          return (
+            <button
+              key={type}
+              onClick={() => setTypeFilter(type)}
+              style={{
+                padding: '6px 12px',
+                borderRadius: '8px',
+                border: 'none',
+                background: typeFilter === type ? 'var(--bg-card-hover)' : 'transparent',
+                color: typeFilter === type ? 'var(--text-primary)' : 'var(--text-muted)',
+                fontSize: '12px',
+                fontWeight: '500',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '4px',
+                transition: 'all 0.2s',
+              }}
+            >
+              {icon} {count}
+            </button>
+          )
+        })}
       </div>
 
-      {/* Document List */}
-      {documents.length === 0 ? (
-        <div className="text-center py-12 text-[hsl(var(--muted-foreground))]">
-          <span className="text-4xl mb-4 block">{icon}</span>
-          <p>No {type}s yet</p>
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {documents.map((doc) => (
-            <Link
+      {/* Document list */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '8px',
+      }}>
+        {filtered.map((doc, index) => {
+          const typeConfig = typeIcons[doc.type] || typeIcons.note
+          const isSelected = doc.id === selectedId
+
+          return (
+            <div
               key={doc.id}
-              href={`${basePath}/${doc.slug}`}
-              className="block p-4 bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-lg hover:border-[hsl(var(--accent))] transition-colors group"
+              onClick={() => onSelect(doc)}
+              className="animate-slide-up"
+              style={{
+                padding: '12px',
+                borderRadius: '8px',
+                marginBottom: '4px',
+                cursor: 'pointer',
+                background: isSelected ? 'var(--bg-card-hover)' : 'transparent',
+                border: isSelected ? '1px solid var(--border-card)' : '1px solid transparent',
+                transition: 'all 0.2s',
+                animationDelay: `${index * 30}ms`,
+              }}
             >
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-medium text-lg group-hover:text-[hsl(var(--accent))] transition-colors">
+              <div style={{
+                display: 'flex',
+                alignItems: 'flex-start',
+                gap: '10px',
+              }}>
+                <span style={{
+                  fontSize: '16px',
+                  opacity: 0.8,
+                }}>{typeConfig.icon}</span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <h4 style={{
+                    fontSize: '13px',
+                    fontWeight: '500',
+                    color: 'var(--text-primary)',
+                    marginBottom: '4px',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                  }}>
                     {doc.title}
-                  </h3>
-                  <div className="flex items-center gap-2 mt-2">
-                    {doc.tags.slice(0, 4).map((tag) => (
-                      <span
-                        key={tag}
-                        className="text-xs px-2 py-0.5 bg-[hsl(var(--background))] rounded-full text-[hsl(var(--muted-foreground))]"
-                      >
-                        #{tag}
-                      </span>
-                    ))}
+                  </h4>
+                  <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '8px',
+                  }}>
+                    <span style={{
+                      fontSize: '11px',
+                      color: typeConfig.color,
+                      textTransform: 'capitalize',
+                    }}>
+                      {doc.type}
+                    </span>
+                    <span style={{
+                      fontSize: '11px',
+                      color: 'var(--text-muted)',
+                    }}>
+                      {formatDate(doc.updatedAt)}
+                    </span>
                   </div>
                 </div>
-                <div className="text-sm text-[hsl(var(--muted-foreground))]">
-                  {doc.updatedAt.toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric',
-                    year: doc.updatedAt.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
-                  })}
-                </div>
               </div>
-            </Link>
-          ))}
-        </div>
-      )}
+            </div>
+          )
+        })}
+
+        {filtered.length === 0 && (
+          <div style={{
+            padding: '40px 20px',
+            textAlign: 'center',
+            color: 'var(--text-muted)',
+            fontSize: '13px',
+          }}>
+            No documents yet
+          </div>
+        )}
+      </div>
     </div>
-  );
+  )
 }

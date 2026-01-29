@@ -73,6 +73,11 @@ body {
   50% { transform: translateY(-3px); }
 }
 
+@keyframes bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -84,14 +89,115 @@ body {
   }
 }
 
+@keyframes ping-slow {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.2); opacity: 0.8; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+@keyframes pulse-slow {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.02); opacity: 0.9; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-5deg); }
+  75% { transform: rotate(5deg); }
+}
+
 .animate-pulse {
   animation: pulse 2s ease-in-out infinite;
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 3s ease-in-out infinite;
 }
 
 .animate-float {
   animation: float 3s ease-in-out infinite;
 }
 
+.animate-bounce {
+  animation: bounce 1s ease-in-out infinite;
+}
+
 .animate-slide-up {
   animation: slideUp 0.3s ease-out forwards;
+}
+
+.animate-ping-slow {
+  animation: ping-slow 2s ease-in-out infinite;
+}
+
+.animate-spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
+
+.animate-wiggle {
+  animation: wiggle 0.5s ease-in-out infinite;
+}
+
+/* Tab styles */
+.tab-button {
+  padding: 8px 16px;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  transition: all 0.2s;
+  font-family: 'Space Grotesk', sans-serif;
+}
+
+.tab-button:hover {
+  color: var(--text-secondary);
+}
+
+.tab-button.active {
+  color: var(--text-primary);
+  border-bottom-color: var(--accent-blue);
+}
+
+/* Sidebar nav */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  color: var(--text-secondary);
+  font-size: 13px;
+  cursor: pointer;
+  border-radius: 8px;
+  margin: 2px 8px;
+  transition: all 0.2s;
+}
+
+.nav-item:hover {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.nav-item.active {
+  background: var(--bg-card);
+  color: var(--text-primary);
+}
+
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background: var(--accent-blue);
+  border-radius: 0 2px 2px 0;
 }

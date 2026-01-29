@@ -1,137 +1,225 @@
-'use client';
+'use client'
 
-import Link from 'next/link';
-import { Document } from '@/types/document';
+import React from 'react'
+import { Document } from '@/types/document'
 
 interface DocumentViewerProps {
-  document: Document;
+  document: Document | null
 }
 
 export default function DocumentViewer({ document }: DocumentViewerProps) {
-  const typeConfig = {
-    journal: { icon: '📓', label: 'Journal', path: '/journals' },
-    concept: { icon: '💡', label: 'Concept', path: '/concepts' },
-    project: { icon: '🚀', label: 'Project', path: '/projects' },
-    note: { icon: '📝', label: 'Note', path: '/notes' },
-  };
+  if (!document) {
+    return (
+      <div style={{
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: 'var(--text-muted)',
+        fontSize: '14px',
+        padding: '40px',
+        textAlign: 'center',
+      }}>
+        <div>
+          <span style={{ fontSize: '48px', display: 'block', marginBottom: '16px', opacity: 0.3 }}>📄</span>
+          Select a document to view
+        </div>
+      </div>
+    )
+  }
 
-  const config = typeConfig[document.type];
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('en-US', {
+      weekday: 'long',
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    })
+  }
 
-  // Simple markdown to HTML conversion for the mock
-  const htmlContent = parseMarkdown(document.content);
+  // Simple markdown-ish rendering
+  const renderContent = (content: string) => {
+    const lines = content.split('\n')
+    const elements: React.ReactNode[] = []
+    let inList = false
+    let listItems: string[] = []
+
+    const flushList = () => {
+      if (listItems.length > 0) {
+        elements.push(
+          <ul key={`list-${elements.length}`} style={{
+            margin: '12px 0',
+            paddingLeft: '24px',
+            listStyle: 'disc',
+          }}>
+            {listItems.map((item, i) => (
+              <li key={i} style={{
+                marginBottom: '6px',
+                color: 'var(--text-secondary)',
+                fontSize: '14px',
+                lineHeight: '1.6',
+              }}>
+                {item}
+              </li>
+            ))}
+          </ul>
+        )
+        listItems = []
+      }
+      inList = false
+    }
+
+    lines.forEach((line, i) => {
+      const trimmed = line.trim()
+
+      // Headers
+      if (trimmed.startsWith('# ')) {
+        flushList()
+        elements.push(
+          <h1 key={i} style={{
+            fontSize: '24px',
+            fontWeight: '700',
+            color: 'var(--text-primary)',
+            marginBottom: '16px',
+            marginTop: elements.length > 0 ? '32px' : '0',
+          }}>
+            {trimmed.slice(2)}
+          </h1>
+        )
+      } else if (trimmed.startsWith('## ')) {
+        flushList()
+        elements.push(
+          <h2 key={i} style={{
+            fontSize: '18px',
+            fontWeight: '600',
+            color: 'var(--text-primary)',
+            marginBottom: '12px',
+            marginTop: '24px',
+            paddingBottom: '8px',
+            borderBottom: '1px solid var(--border-subtle)',
+          }}>
+            {trimmed.slice(3)}
+          </h2>
+        )
+      } else if (trimmed.startsWith('### ')) {
+        flushList()
+        elements.push(
+          <h3 key={i} style={{
+            fontSize: '15px',
+            fontWeight: '600',
+            color: 'var(--text-primary)',
+            marginBottom: '8px',
+            marginTop: '20px',
+          }}>
+            {trimmed.slice(4)}
+          </h3>
+        )
+      }
+      // List items
+      else if (trimmed.startsWith('- ') || trimmed.startsWith('* ')) {
+        inList = true
+        let item = trimmed.slice(2)
+        // Handle checkboxes
+        if (item.startsWith('[ ] ')) {
+          item = '☐ ' + item.slice(4)
+        } else if (item.startsWith('[x] ') || item.startsWith('[X] ')) {
+          item = '✅ ' + item.slice(4)
+        }
+        listItems.push(item)
+      }
+      // Empty line
+      else if (trimmed === '') {
+        flushList()
+      }
+      // Regular paragraph
+      else if (trimmed) {
+        flushList()
+        elements.push(
+          <p key={i} style={{
+            fontSize: '14px',
+            color: 'var(--text-secondary)',
+            lineHeight: '1.7',
+            marginBottom: '12px',
+          }}>
+            {trimmed}
+          </p>
+        )
+      }
+    })
+
+    flushList()
+    return elements
+  }
+
+  const typeColors: Record<string, string> = {
+    journal: '#3b82f6',
+    concept: '#fbbf24',
+    note: '#22c55e',
+    project: '#a855f7',
+  }
 
   return (
-    <div className="max-w-3xl mx-auto p-8">
-      {/* Breadcrumb */}
-      <div className="flex items-center gap-2 text-sm text-[hsl(var(--muted-foreground))] mb-6">
-        <Link href="/" className="hover:text-[hsl(var(--foreground))]">Home</Link>
-        <span>/</span>
-        <Link href={config.path} className="hover:text-[hsl(var(--foreground))]">{config.label}s</Link>
-        <span>/</span>
-        <span className="text-[hsl(var(--foreground))]">{document.title}</span>
+    <div style={{
+      height: '100%',
+      display: 'flex',
+      flexDirection: 'column',
+    }}>
+      {/* Header */}
+      <div style={{
+        padding: '20px 24px',
+        borderBottom: '1px solid var(--border-subtle)',
+      }}>
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          marginBottom: '8px',
+        }}>
+          <span style={{
+            fontSize: '11px',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            color: typeColors[document.type] || 'var(--accent-blue)',
+            background: `${typeColors[document.type] || 'var(--accent-blue)'}20`,
+            padding: '2px 8px',
+            borderRadius: '4px',
+          }}>
+            {document.type}
+          </span>
+          {document.tags.slice(0, 3).map(tag => (
+            <span key={tag} style={{
+              fontSize: '11px',
+              color: 'var(--text-muted)',
+            }}>
+              #{tag}
+            </span>
+          ))}
+        </div>
+        <h1 style={{
+          fontSize: '20px',
+          fontWeight: '600',
+          color: 'var(--text-primary)',
+          marginBottom: '4px',
+        }}>
+          {document.title}
+        </h1>
+        <p style={{
+          fontSize: '12px',
+          color: 'var(--text-muted)',
+          fontFamily: "'JetBrains Mono', monospace",
+        }}>
+          {formatDate(document.createdAt)}
+        </p>
       </div>
 
-      {/* Header */}
-      <header className="mb-8 pb-6 border-b border-[hsl(var(--border))]">
-        <div className="flex items-center gap-3 mb-2">
-          <span className="text-3xl">{config.icon}</span>
-          <h1 className="text-3xl font-bold">{document.title}</h1>
-        </div>
-        
-        {/* Meta */}
-        <div className="flex items-center gap-4 mt-4 text-sm text-[hsl(var(--muted-foreground))]">
-          <span>
-            Created {document.createdAt.toLocaleDateString('en-US', { 
-              month: 'long', 
-              day: 'numeric', 
-              year: 'numeric' 
-            })}
-          </span>
-          <span>·</span>
-          <span>
-            Updated {document.updatedAt.toLocaleDateString('en-US', { 
-              month: 'long', 
-              day: 'numeric', 
-              year: 'numeric' 
-            })}
-          </span>
-        </div>
-
-        {/* Tags */}
-        {document.tags.length > 0 && (
-          <div className="flex flex-wrap gap-2 mt-4">
-            {document.tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-2 py-1 text-xs bg-[hsl(var(--muted))] border border-[hsl(var(--border))] rounded-full"
-              >
-                #{tag}
-              </span>
-            ))}
-          </div>
-        )}
-      </header>
-
       {/* Content */}
-      <article 
-        className="prose"
-        dangerouslySetInnerHTML={{ __html: htmlContent }}
-      />
-
-      {/* Footer */}
-      <footer className="mt-12 pt-6 border-t border-[hsl(var(--border))]">
-        <Link 
-          href={config.path}
-          className="text-sm text-[hsl(var(--accent))] hover:underline"
-        >
-          ← Back to {config.label}s
-        </Link>
-      </footer>
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        padding: '24px',
+      }}>
+        {renderContent(document.content)}
+      </div>
     </div>
-  );
-}
-
-// Simple markdown parser for demo purposes
-function parseMarkdown(markdown: string): string {
-  return markdown
-    // Headers
-    .replace(/^### (.*$)/gim, '<h3>$1</h3>')
-    .replace(/^## (.*$)/gim, '<h2>$1</h2>')
-    .replace(/^# (.*$)/gim, '<h1>$1</h1>')
-    // Bold
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-    // Italic
-    .replace(/\*(.*?)\*/g, '<em>$1</em>')
-    // Code blocks
-    .replace(/```[\s\S]*?```/g, (match) => {
-      const code = match.replace(/```\w*\n?/g, '');
-      return `<pre><code>${escapeHtml(code)}</code></pre>`;
-    })
-    // Inline code
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    // Links
-    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>')
-    // Unordered lists
-    .replace(/^\- (.*$)/gim, '<li>$1</li>')
-    // Checkboxes
-    .replace(/^\- \[x\] (.*$)/gim, '<li>✅ $1</li>')
-    .replace(/^\- \[ \] (.*$)/gim, '<li>☐ $1</li>')
-    // Wrap consecutive li in ul
-    .replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>')
-    // Paragraphs
-    .replace(/\n\n/g, '</p><p>')
-    .replace(/^(?!<[h|u|p|l|o|b])(.+)$/gim, '<p>$1</p>')
-    // Clean up empty paragraphs
-    .replace(/<p><\/p>/g, '')
-    .replace(/<p>(<[hulo])/g, '$1')
-    .replace(/(<\/[hulo][^>]*>)<\/p>/g, '$1');
-}
-
-function escapeHtml(str: string): string {
-  return str
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  )
 }

@@ -2,41 +2,93 @@
 
 import { useEffect, useState } from 'react'
 
-type AgentState = 'online' | 'working' | 'thinking' | 'idle' | 'sleeping'
+export type AgentState = 'online' | 'working' | 'thinking' | 'idle' | 'sleeping'
 
-interface AgentStatusData {
+export interface AgentStatusData {
   state: AgentState
   currentTask?: string
   lastActive: string
 }
 
-const stateConfig: Record<AgentState, { emoji: string; label: string; color: string }> = {
+const stateConfig: Record<AgentState, { emoji: string; label: string; color: string; animation?: string }> = {
   online: { emoji: '🟢', label: 'Online', color: '#22c55e' },
-  working: { emoji: '⚡', label: 'Working', color: '#fbbf24' },
-  thinking: { emoji: '🧠', label: 'Thinking', color: '#a855f7' },
+  working: { emoji: '⚡', label: 'Working', color: '#fbbf24', animation: 'bounce' },
+  thinking: { emoji: '🧠', label: 'Thinking', color: '#a855f7', animation: 'pulse' },
   idle: { emoji: '😊', label: 'Idle', color: '#3b82f6' },
   sleeping: { emoji: '😴', label: 'Sleeping', color: '#6b7280' },
 }
 
-export default function AgentStatus() {
+interface AgentStatusProps {
+  compact?: boolean
+}
+
+export default function AgentStatus({ compact = false }: AgentStatusProps) {
   const [status, setStatus] = useState<AgentStatusData>({
-    state: 'online',
-    currentTask: 'Ready for tasks',
+    state: 'working',
+    currentTask: 'Building 2nd Brain dashboard',
     lastActive: new Date().toISOString(),
   })
 
-  // In production, this would poll an API endpoint
+  // Cycle through states for demo
   useEffect(() => {
+    const states: AgentState[] = ['working', 'thinking', 'online']
+    let idx = 0
     const interval = setInterval(() => {
+      idx = (idx + 1) % states.length
       setStatus(prev => ({
         ...prev,
+        state: states[idx],
         lastActive: new Date().toISOString(),
       }))
-    }, 30000)
+    }, 5000)
     return () => clearInterval(interval)
   }, [])
 
   const config = stateConfig[status.state]
+
+  if (compact) {
+    return (
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+      }}>
+        <div style={{
+          width: '32px',
+          height: '32px',
+          borderRadius: '8px',
+          background: 'linear-gradient(135deg, #1a1a2e 0%, #16213e 100%)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          fontSize: '18px',
+          border: '1px solid var(--border-card)',
+        }}
+        className={config.animation === 'bounce' ? 'animate-bounce' : config.animation === 'pulse' ? 'animate-pulse' : ''}
+        >
+          🦊
+        </div>
+        <div>
+          <div style={{ fontSize: '13px', fontWeight: '600' }}>Jackal</div>
+          <div style={{ 
+            fontSize: '11px', 
+            color: config.color,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '4px',
+          }}>
+            <span style={{
+              width: '6px',
+              height: '6px',
+              borderRadius: '50%',
+              background: config.color,
+            }} className="animate-pulse" />
+            {config.label}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div style={{
@@ -60,20 +112,50 @@ export default function AgentStatus() {
           alignItems: 'center',
           justifyContent: 'center',
           fontSize: '42px',
-          boxShadow: '0 4px 20px rgba(0, 0, 0, 0.4)',
-          border: '2px solid var(--border-card)',
+          boxShadow: `0 4px 20px rgba(0, 0, 0, 0.4), 0 0 30px ${config.color}30`,
+          border: `2px solid ${config.color}40`,
+          transition: 'all 0.3s ease',
         }}
-        className="animate-float"
+        className={config.animation === 'bounce' ? 'animate-bounce' : config.animation === 'pulse' ? 'animate-pulse-slow' : 'animate-float'}
         >
           🦊
         </div>
-        {/* Sparkles */}
-        <span style={{
+        {/* Status ring */}
+        <div style={{
           position: 'absolute',
-          top: '-8px',
-          right: '-8px',
-          fontSize: '20px',
-        }}>✨</span>
+          bottom: '-4px',
+          right: '-4px',
+          width: '24px',
+          height: '24px',
+          borderRadius: '50%',
+          background: 'var(--bg-secondary)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          border: '2px solid var(--bg-secondary)',
+        }}>
+          <span style={{ fontSize: '14px' }}
+            className={config.animation ? 'animate-bounce' : ''}
+          >{config.emoji}</span>
+        </div>
+        {/* Sparkles when working */}
+        {status.state === 'working' && (
+          <>
+            <span style={{
+              position: 'absolute',
+              top: '-8px',
+              right: '-8px',
+              fontSize: '16px',
+            }} className="animate-ping-slow">✨</span>
+            <span style={{
+              position: 'absolute',
+              top: '10px',
+              left: '-12px',
+              fontSize: '12px',
+              animationDelay: '0.5s',
+            }} className="animate-ping-slow">⚡</span>
+          </>
+        )}
       </div>
 
       {/* Name */}
@@ -93,8 +175,10 @@ export default function AgentStatus() {
         gap: '6px',
         padding: '4px 12px',
         borderRadius: '12px',
-        background: 'var(--bg-card)',
+        background: `${config.color}15`,
+        border: `1px solid ${config.color}30`,
         marginBottom: '12px',
+        transition: 'all 0.3s ease',
       }}>
         <span style={{
           width: '8px',
@@ -105,10 +189,10 @@ export default function AgentStatus() {
         }}
         className="animate-pulse"
         />
-        <span style={{ fontSize: '13px' }}>{config.emoji}</span>
         <span style={{
           fontSize: '13px',
-          color: 'var(--text-secondary)',
+          color: config.color,
+          fontWeight: '500',
         }}>
           {config.label}
         </span>
@@ -120,8 +204,10 @@ export default function AgentStatus() {
         color: 'var(--text-muted)',
         textAlign: 'center',
         fontFamily: "'JetBrains Mono', monospace",
+        maxWidth: '140px',
+        lineHeight: '1.4',
       }}>
-        {status.currentTask}
+        {status.currentTask || 'Ready for tasks'}
       </p>
     </div>
   )
