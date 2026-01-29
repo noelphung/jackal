@@ -1,10 +1,10 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { useAuth } from '@/contexts/AuthContext'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import DashboardLayout from '@/components/DashboardLayout'
-import { supabase, Task, Project, ActivityLog } from '@/lib/supabase'
+import { supabase, Task, Project, Document, subscribeToTasks, subscribeToDocuments, unsubscribe, JACKAL_USER_ID } from '@/lib/supabase'
+import { RealtimeChannel } from '@supabase/supabase-js'
 
 interface Stats {
   totalTasks: number
@@ -14,18 +14,17 @@ interface Stats {
 }
 
 export default function Dashboard() {
-  const { user } = useAuth()
   const [stats, setStats] = useState<Stats>({
     totalTasks: 0,
     completedTasks: 0,
     activeProjects: 0,
     totalDocuments: 0,
   })
-  const [recentActivity, setRecentActivity] = useState<ActivityLog[]>([])
   const [recentTasks, setRecentTasks] = useState<Task[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
   const [isMobile, setIsMobile] = useState(false)
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date())
 
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth <= 768)
@@ -35,33 +34,59 @@ export default function Dashboard() {
   }, [])
 
   useEffect(() => {
-    if (user) {
+    loadDashboardData()
+
+    // Set up realtime subscriptions
+    const tasksChannel = subscribeToTasks((payload) => {
+      console.log('Tasks changed:', payload.eventType)
+      loadDashboardData() // Reload on any change
+      setLastUpdate(new Date())
+    })
+
+    const docsChannel = subscribeToDocuments((payload) => {
+      console.log('Documents changed:', payload.eventType)
       loadDashboardData()
+      setLastUpdate(new Date())
+    })
+
+    // Cleanup subscriptions on unmount
+    return () => {
+      unsubscribe(tasksChannel)
+      unsubscribe(docsChannel)
     }
-  }, [user])
+  }, [])
 
   const loadDashboardData = async () => {
     try {
-      const [tasksRes, projectsRes, docsRes, activityRes] = await Promise.all([
-        supabase.from('tasks').select('*').eq('user_id', user?.id),
-        supabase.from('projects').select('*').eq('user_id', user?.id).eq('status', 'active'),
-        supabase.from('documents').select('id'),
-        supabase.from('activity_log').select('*').eq('user_id', user?.id).order('created_at', { ascending: false }).limit(10),
-      ])
+      // Load tasks (all tasks, not filtered by user)
+      const { data: tasks } = await supabase
+        .from('tasks')
+        .select('*')
+        .order('priority', { ascending: true })
 
-      const tasks = tasksRes.data || []
-      const projectsList = projectsRes.data || []
+      // Load projects
+      const { data: projectsList } = await supabase
+        .from('projects')
+        .select('*')
+        .eq('status', 'active')
+
+      // Load documents count
+      const { data: docs } = await supabase
+        .from('documents')
+        .select('id')
+
+      const allTasks = tasks || []
+      const allProjects = projectsList || []
 
       setStats({
-        totalTasks: tasks.length,
-        completedTasks: tasks.filter(t => t.status === 'done').length,
-        activeProjects: projectsList.length,
-        totalDocuments: docsRes.data?.length || 0,
+        totalTasks: allTasks.length,
+        completedTasks: allTasks.filter(t => t.status === 'done').length,
+        activeProjects: allProjects.length,
+        totalDocuments: docs?.length || 0,
       })
 
-      setProjects(projectsList)
-      setRecentTasks(tasks.slice(0, 5))
-      setRecentActivity(activityRes.data || [])
+      setProjects(allProjects)
+      setRecentTasks(allTasks.slice(0, 8)) // Show up to 8 tasks
     } catch (err) {
       console.error('Failed to load dashboard data:', err)
     } finally {
@@ -75,8 +100,18 @@ export default function Dashboard() {
       case 'in_progress': return '#f59e0b'
       case 'review': return 'var(--accent-blue)'
       case 'done': return 'var(--accent-green)'
+      case 'backlog': return 'var(--text-muted)'
       default: return 'var(--text-muted)'
     }
+  }
+
+  const formatTime = (date: Date) => {
+    return date.toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      second: '2-digit',
+      hour12: true,
+    })
   }
 
   return (
@@ -89,19 +124,40 @@ export default function Dashboard() {
         }}>
           {/* Welcome Header */}
           <div style={{ marginBottom: isMobile ? '20px' : '32px' }}>
-            <h1 style={{
-              fontSize: isMobile ? '22px' : '28px',
-              fontWeight: '700',
-              color: 'var(--text-primary)',
-              marginBottom: '8px',
-            }}>
-              Welcome back 👋
-            </h1>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>
+              <h1 style={{
+                fontSize: isMobile ? '22px' : '28px',
+                fontWeight: '700',
+                color: 'var(--text-primary)',
+              }}>
+                Mission Control 🎯
+              </h1>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '8px',
+                padding: '6px 12px',
+                background: 'rgba(34, 197, 94, 0.1)',
+                borderRadius: '8px',
+                fontSize: '12px',
+              }}>
+                <span style={{
+                  width: '8px',
+                  height: '8px',
+                  borderRadius: '50%',
+                  background: 'var(--accent-green)',
+                }} className="animate-pulse" />
+                <span style={{ color: 'var(--accent-green)' }}>
+                  Live • {formatTime(lastUpdate)}
+                </span>
+              </div>
+            </div>
             <p style={{
               color: 'var(--text-muted)',
               fontSize: isMobile ? '13px' : '14px',
+              marginTop: '8px',
             }}>
-              Here&apos;s what&apos;s happening with your projects today.
+              Realtime sync with Supabase • Changes appear instantly
             </p>
           </div>
 
@@ -156,12 +212,13 @@ export default function Dashboard() {
                 gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr',
                 gap: isMobile ? '16px' : '24px',
               }}>
-                {/* Recent Tasks */}
+                {/* Today's Tasks - Full Width on top */}
                 <div style={{
                   background: 'var(--bg-card)',
                   borderRadius: '16px',
                   border: '1px solid var(--border-card)',
                   padding: isMobile ? '16px' : '24px',
+                  gridColumn: isMobile ? '1' : '1 / -1',
                 }}>
                   <div style={{
                     display: 'flex',
@@ -170,19 +227,21 @@ export default function Dashboard() {
                     marginBottom: '16px',
                   }}>
                     <h2 style={{
-                      fontSize: isMobile ? '14px' : '16px',
+                      fontSize: isMobile ? '16px' : '18px',
                       fontWeight: '600',
                       color: 'var(--text-primary)',
                     }}>
-                      📋 Recent Tasks
+                      📋 Today&apos;s Tasks
                     </h2>
-                    <a href="/pipeline" style={{
-                      fontSize: '13px',
-                      color: 'var(--accent-blue)',
-                      textDecoration: 'none',
+                    <span style={{
+                      fontSize: '12px',
+                      color: 'var(--text-muted)',
+                      background: 'var(--bg-secondary)',
+                      padding: '4px 10px',
+                      borderRadius: '6px',
                     }}>
-                      View all →
-                    </a>
+                      {recentTasks.filter(t => t.status !== 'done').length} pending
+                    </span>
                   </div>
 
                   {recentTasks.length === 0 ? (
@@ -195,7 +254,11 @@ export default function Dashboard() {
                       <p style={{ fontSize: '13px' }}>No tasks yet</p>
                     </div>
                   ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    <div style={{ 
+                      display: 'grid',
+                      gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)',
+                      gap: '10px',
+                    }}>
                       {recentTasks.map(task => (
                         <div
                           key={task.id}
@@ -203,134 +266,56 @@ export default function Dashboard() {
                             display: 'flex',
                             alignItems: 'center',
                             gap: '12px',
-                            padding: isMobile ? '10px' : '12px',
-                            background: 'var(--bg-secondary)',
+                            padding: isMobile ? '12px' : '14px',
+                            background: task.status === 'done' ? 'var(--bg-done)' : 'var(--bg-secondary)',
                             borderRadius: '10px',
+                            borderLeft: `3px solid ${getStatusColor(task.status)}`,
+                            opacity: task.status === 'done' ? 0.7 : 1,
                           }}
                         >
                           <div style={{
-                            width: '8px',
-                            height: '8px',
-                            borderRadius: '50%',
-                            background: getStatusColor(task.status),
+                            width: '20px',
+                            height: '20px',
+                            borderRadius: '6px',
+                            border: task.status === 'done' ? 'none' : `2px solid ${getStatusColor(task.status)}`,
+                            background: task.status === 'done' ? 'var(--accent-green)' : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
                             flexShrink: 0,
-                          }} />
+                            cursor: 'pointer',
+                          }}>
+                            {task.status === 'done' && <span style={{ color: 'white', fontSize: '12px' }}>✓</span>}
+                          </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{
-                              color: 'var(--text-primary)',
+                              color: task.status === 'done' ? 'var(--text-muted)' : 'var(--text-primary)',
                               fontSize: '13px',
                               fontWeight: '500',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
+                              textDecoration: task.status === 'done' ? 'line-through' : 'none',
                             }}>
                               {task.title}
                             </div>
-                          </div>
-                          <span style={{
-                            fontSize: '11px',
-                            color: 'var(--text-muted)',
-                            textTransform: 'capitalize',
-                            flexShrink: 0,
-                          }}>
-                            {task.status.replace('_', ' ')}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Active Projects */}
-                <div style={{
-                  background: 'var(--bg-card)',
-                  borderRadius: '16px',
-                  border: '1px solid var(--border-card)',
-                  padding: isMobile ? '16px' : '24px',
-                }}>
-                  <div style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    marginBottom: '16px',
-                  }}>
-                    <h2 style={{
-                      fontSize: isMobile ? '14px' : '16px',
-                      fontWeight: '600',
-                      color: 'var(--text-primary)',
-                    }}>
-                      🚀 Active Projects
-                    </h2>
-                    <a href="/pipeline" style={{
-                      fontSize: '13px',
-                      color: 'var(--accent-blue)',
-                      textDecoration: 'none',
-                    }}>
-                      Manage →
-                    </a>
-                  </div>
-
-                  {projects.length === 0 ? (
-                    <div style={{
-                      padding: isMobile ? '24px 12px' : '40px 20px',
-                      textAlign: 'center',
-                      color: 'var(--text-muted)',
-                    }}>
-                      <div style={{ fontSize: '32px', marginBottom: '12px' }}>📁</div>
-                      <p style={{ fontSize: '13px' }}>No projects yet</p>
-                    </div>
-                  ) : (
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                      {projects.map(project => (
-                        <div
-                          key={project.id}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '12px',
-                            padding: isMobile ? '12px' : '14px',
-                            background: 'var(--bg-secondary)',
-                            borderRadius: '10px',
-                          }}
-                        >
-                          <div style={{
-                            width: '36px',
-                            height: '36px',
-                            borderRadius: '10px',
-                            background: `${project.color}20`,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            flexShrink: 0,
-                          }}>
-                            <div style={{
-                              width: '12px',
-                              height: '12px',
-                              borderRadius: '4px',
-                              background: project.color,
-                            }} />
-                          </div>
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{
-                              color: 'var(--text-primary)',
-                              fontSize: '14px',
-                              fontWeight: '500',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                            }}>
-                              {project.name}
-                            </div>
-                            {project.description && (
+                            {task.tags && task.tags.length > 0 && (
                               <div style={{
-                                color: 'var(--text-muted)',
-                                fontSize: '12px',
-                                marginTop: '2px',
-                                overflow: 'hidden',
-                                textOverflow: 'ellipsis',
-                                whiteSpace: 'nowrap',
+                                display: 'flex',
+                                gap: '4px',
+                                marginTop: '4px',
                               }}>
-                                {project.description}
+                                {task.tags.slice(0, 2).map(tag => (
+                                  <span key={tag} style={{
+                                    fontSize: '10px',
+                                    color: 'var(--text-muted)',
+                                    background: 'var(--bg-primary)',
+                                    padding: '2px 6px',
+                                    borderRadius: '4px',
+                                  }}>
+                                    {tag}
+                                  </span>
+                                ))}
                               </div>
                             )}
                           </div>
@@ -362,9 +347,9 @@ export default function Dashboard() {
                     gap: '10px',
                   }}>
                     <QuickAction href="/pipeline" icon="➕" label="New Task" compact={isMobile} />
-                    <QuickAction href="/pipeline" icon="📁" label="New Project" compact={isMobile} />
-                    <QuickAction href="/documents" icon="📄" label="View Docs" compact={isMobile} />
-                    <QuickAction href="/api-keys" icon="🔑" label="API Keys" compact={isMobile} />
+                    <QuickAction href="/documents" icon="📄" label="Documents" compact={isMobile} />
+                    <QuickAction href="/cron" icon="⏰" label="Cron Jobs" compact={isMobile} />
+                    <QuickAction href="/agent" icon="🤖" label="Agent" compact={isMobile} />
                   </div>
                 </div>
 
@@ -386,9 +371,9 @@ export default function Dashboard() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                     <StatusItem label="Jackal Agent" status="online" compact={isMobile} />
-                    <StatusItem label="Supabase" status="online" compact={isMobile} />
+                    <StatusItem label="Supabase Realtime" status="online" compact={isMobile} />
                     <StatusItem label="n8n Workflows" status="online" compact={isMobile} />
-                    <StatusItem label="Cron Jobs" status="online" compact={isMobile} />
+                    <StatusItem label="Vercel Deploy" status="online" compact={isMobile} />
                   </div>
                 </div>
               </div>
@@ -518,7 +503,7 @@ function StatusItem({ label, status, compact }: { label: string; status: 'online
           height: '8px',
           borderRadius: '50%',
           background: colors[status],
-        }} />
+        }} className="animate-pulse" />
         <span style={{
           color: colors[status],
           fontSize: '11px',

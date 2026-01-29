@@ -1,11 +1,28 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, RealtimeChannel } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  realtime: {
+    params: {
+      eventsPerSecond: 10
+    }
+  }
+})
 
 // Types
+export interface Document {
+  id: string
+  slug: string
+  title: string
+  type: 'journal' | 'concept' | 'note' | 'project'
+  content: string
+  tags: string[]
+  created_at: string
+  updated_at: string
+}
+
 export interface Project {
   id: string
   user_id: string
@@ -72,6 +89,48 @@ export interface ActivityLog {
   created_at: string
 }
 
+// Realtime subscription helpers
+export function subscribeToTable<T>(
+  table: string,
+  callback: (payload: { eventType: string; new: T | null; old: T | null }) => void
+): RealtimeChannel {
+  return supabase
+    .channel(`${table}_changes`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table },
+      (payload) => callback({
+        eventType: payload.eventType,
+        new: payload.new as T | null,
+        old: payload.old as T | null,
+      })
+    )
+    .subscribe()
+}
+
+export function subscribeToDocuments(
+  callback: (payload: { eventType: string; new: Document | null; old: Document | null }) => void
+): RealtimeChannel {
+  return subscribeToTable<Document>('documents', callback)
+}
+
+export function subscribeToTasks(
+  callback: (payload: { eventType: string; new: Task | null; old: Task | null }) => void
+): RealtimeChannel {
+  return subscribeToTable<Task>('tasks', callback)
+}
+
+export function subscribeToProjects(
+  callback: (payload: { eventType: string; new: Project | null; old: Project | null }) => void
+): RealtimeChannel {
+  return subscribeToTable<Project>('projects', callback)
+}
+
+// Unsubscribe helper
+export function unsubscribe(channel: RealtimeChannel) {
+  supabase.removeChannel(channel)
+}
+
 // Helper functions
 export async function getCurrentUser() {
   const { data: { user } } = await supabase.auth.getUser()
@@ -92,3 +151,6 @@ export async function signOut() {
   const { error } = await supabase.auth.signOut()
   return { error }
 }
+
+// Default user ID for Jackal (system user)
+export const JACKAL_USER_ID = '00000000-0000-0000-0000-000000000001'
