@@ -19,7 +19,7 @@ export default function LoginPage() {
     setMessage('')
 
     // Whitelist check - only allow specific emails
-    const allowedEmails = ['contact@synlixa.com', 'hung.d.phung1@gmail.com', 'noel@synlixa.com']
+    const allowedEmails = ['hung.d.phung1@gmail.com']
     if (!allowedEmails.includes(email.toLowerCase())) {
       setError('Access denied. This dashboard is private.')
       setLoading(false)
@@ -85,7 +85,7 @@ export default function LoginPage() {
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            placeholder="noel@synlixa.com"
+            placeholder="Enter your email"
             required
             style={{
               width: '100%',
