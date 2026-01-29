@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import AgentStatus from './AgentStatus'
 
-type TabType = 'overview' | 'tasks' | 'pipeline' | 'documents' | 'logs' | 'api-keys' | 'settings'
+type TabType = 'overview' | 'tasks' | 'pipeline' | 'documents' | 'logs' | 'agent' | 'integrations' | 'cron' | 'backups' | 'api-keys' | 'settings'
 
 interface NavItem {
   id: TabType
@@ -19,6 +19,13 @@ const navItems: NavItem[] = [
   { id: 'pipeline', icon: '🚀', label: 'Pipeline', href: '/pipeline' },
   { id: 'documents', icon: '📄', label: 'Documents', href: '/documents' },
   { id: 'logs', icon: '📝', label: 'Logs', href: '/logs' },
+]
+
+const systemNavItems: NavItem[] = [
+  { id: 'agent', icon: '🤖', label: 'Agent', href: '/agent' },
+  { id: 'integrations', icon: '🔗', label: 'Integrations', href: '/integrations' },
+  { id: 'cron', icon: '⏰', label: 'Cron Jobs', href: '/cron' },
+  { id: 'backups', icon: '💾', label: 'Backups', href: '/backups' },
 ]
 
 const bottomNavItems: NavItem[] = [
@@ -83,6 +90,39 @@ export default function DashboardLayout({ children, activeTab }: DashboardLayout
             Dashboard
           </div>
           {navItems.map(item => (
+            <Link
+              key={item.id}
+              href={item.href}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '10px',
+                padding: '10px 20px',
+                color: currentTab === item.id ? 'var(--text-primary)' : 'var(--text-secondary)',
+                fontSize: '13px',
+                cursor: 'pointer',
+                background: currentTab === item.id ? 'var(--bg-card)' : 'transparent',
+                borderLeft: currentTab === item.id ? '3px solid var(--accent-blue)' : '3px solid transparent',
+                transition: 'all 0.2s',
+                textDecoration: 'none',
+              }}
+            >
+              <span style={{ fontSize: '14px' }}>{item.icon}</span>
+              {item.label}
+            </Link>
+          ))}
+
+          {/* System Section */}
+          <div style={{
+            fontSize: '11px',
+            color: 'var(--text-muted)',
+            textTransform: 'uppercase',
+            letterSpacing: '0.5px',
+            padding: '16px 20px 8px',
+          }}>
+            System
+          </div>
+          {systemNavItems.map(item => (
             <Link
               key={item.id}
               href={item.href}
