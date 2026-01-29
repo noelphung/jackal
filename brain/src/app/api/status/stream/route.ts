@@ -3,8 +3,8 @@ import { NextResponse } from 'next/server'
 export const dynamic = 'force-dynamic'
 export const runtime = 'nodejs'
 
-const SUPABASE_URL = 'https://azxkbejpckpwvwoyljpg.supabase.co'
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6eGtiZWpwY2twd3Z3b3lsanBnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk1NTkxMzIsImV4cCI6MjA4NTEzNTEzMn0.yYhdv8wWAzVORvea1kF5ld1fTV5afQDvHNEWpzSpjSs'
+const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
+const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
 async function fetchStatus() {
   try {
