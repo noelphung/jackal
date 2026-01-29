@@ -1,0 +1,15 @@
+{
+  "mcpServers": {
+    "n8n-mcp": {
+      "command": "npx n8n-mcp",
+      "env": {
+        "MCP_MODE": "stdio",
+        "LOG_LEVEL": "error",
+        "DISABLE_CONSOLE_OUTPUT": "true",
+        "N8N_API_URL": "https://synlixa2.app.n8n.cloud",
+        "N8N_API_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0YTc1NTUzYS01NjUyLTQ4ODAtOTIxNS1iNWY2YmQ5N2E0YTkiLCJpc3MiOiJuOG4iLCJhdWQiOiJwdWJsaWMtYXBpIiwianRpIjoiOTZjNDY2ZjctYzA4OS00ZGQwLWJkYmQtNDRjMTI0OGZmNzQ3IiwiaWF0IjoxNzY5NjEyNDM2fQ.upe9SmxYRDY_l3osFCbixZ_zdNPws6X7EteMLW72E8U"
+      }
+    }
+  },
+  "imports": []
+}
