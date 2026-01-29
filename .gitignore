@@ -1,0 +1,7 @@
+brain/node_modules/
+brain/.next/
+node_modules/
+.next/
+*.node
+brain/.env.local
+.env*
