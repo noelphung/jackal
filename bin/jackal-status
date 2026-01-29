@@ -1,0 +1,22 @@
+#!/bin/bash
+# Update Jackal's status in Supabase for the dashboard
+# Usage: jackal-status <state> [task]
+# States: working, thinking, idle, sleeping, online
+
+STATE="${1:-idle}"
+TASK="${2:-Ready for tasks}"
+NOW=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+
+SUPABASE_URL="https://azxkbejpckpwvwoyljpg.supabase.co"
+SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImF6eGtiZWpwY2twd3Z3b3lsanBnIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc2OTU1OTEzMiwiZXhwIjoyMDg1MTM1MTMyfQ.dmsT1aNFwU4UK33v1EE4_ofLR5lqN0zf5ypVO0E1BCg"
+
+# Update status in Supabase
+CONTENT="{\"state\":\"$STATE\",\"currentTask\":\"$TASK\"}"
+
+curl -s -X PATCH "$SUPABASE_URL/rest/v1/documents?slug=eq._agent_status" \
+  -H "apikey: $SUPABASE_KEY" \
+  -H "Authorization: Bearer $SUPABASE_KEY" \
+  -H "Content-Type: application/json" \
+  -d "{\"content\": $(echo "$CONTENT" | jq -R .), \"updated_at\": \"$NOW\"}" > /dev/null
+
+echo "[$NOW] Status: $STATE - $TASK"

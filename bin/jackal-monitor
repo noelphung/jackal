@@ -1,0 +1,39 @@
+#!/bin/bash
+# Monitor Clawdbot activity and update Jackal's status
+# Run this in background: nohup jackal-monitor &
+
+STATUS_SCRIPT="/home/ubuntu/clawd/bin/jackal-status"
+LOG_FILE="/home/ubuntu/.clawdbot/agents/main/sessions/agent:main:main/session.log"
+LAST_SIZE=0
+IDLE_THRESHOLD=120  # seconds before going idle
+
+update_status() {
+    local state="$1"
+    local task="$2"
+    $STATUS_SCRIPT "$state" "$task"
+}
+
+while true; do
+    # Check if session log has grown (activity happening)
+    if [[ -f "$LOG_FILE" ]]; then
+        CURRENT_SIZE=$(stat -c%s "$LOG_FILE" 2>/dev/null || echo 0)
+        CURRENT_TIME=$(date +%s)
+        
+        if [[ "$CURRENT_SIZE" -gt "$LAST_SIZE" ]]; then
+            # Activity detected
+            update_status "working" "Processing messages"
+            LAST_ACTIVITY=$CURRENT_TIME
+            LAST_SIZE=$CURRENT_SIZE
+        else
+            # Check if we've been idle too long
+            if [[ -n "$LAST_ACTIVITY" ]]; then
+                IDLE_TIME=$((CURRENT_TIME - LAST_ACTIVITY))
+                if [[ $IDLE_TIME -gt $IDLE_THRESHOLD ]]; then
+                    update_status "idle" "Ready for tasks"
+                fi
+            fi
+        fi
+    fi
+    
+    sleep 5
+done

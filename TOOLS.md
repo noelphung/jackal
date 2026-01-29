@@ -2,6 +2,28 @@
 
 Skills define *how* tools work. This file is for *your* specifics — the stuff that's unique to your setup.
 
+## Brain 2 (Backup Supabase)
+
+**Status**: ✅ Full backup destination
+**Project**: azxkbejpckpwvwoyljpg
+**URL**: https://azxkbejpckpwvwoyljpg.supabase.co
+**Dashboard**: https://jackal-brain.vercel.app
+
+**Tables**: documents, tasks, projects, settings, activity_log, api_keys
+
+**Document types**: journal, concept, project, note
+
+**How to sync** (key passed via Telegram, not stored):
+```bash
+curl -X POST "$URL/rest/v1/documents" \
+  -H "apikey: $KEY" -H "Authorization: Bearer $KEY" \
+  -H "Content-Type: application/json" \
+  -H "Prefer: resolution=merge-duplicates" \
+  -d '{"slug":"...", "title":"...", "type":"...", "content":"...", "tags":[...]}'
+```
+
+---
+
 ## Supabase (Direct API)
 
 **Status**: ✅ Full access via service role key
@@ -55,19 +77,22 @@ Access via: `mcporter call vercel.<tool_name>`
 - `n8n_deploy_template` - Deploy from template library
 - `n8n_workflow_versions` - Version history/rollback
 
-**Jackal Workflows (callable via webhook)**:
-| Action | Method | Endpoint |
-|--------|--------|----------|
-| View Calendar | GET | `/webhook/jackal-calendar` |
-| Create Event | POST | `/webhook/jackal-calendar-create` |
-| Edit Event | POST | `/webhook/jackal-calendar-edit` |
-| Delete Event | POST | `/webhook/jackal-calendar-delete` |
-| View Gmail | GET | `/webhook/jackal-gmail` |
+**Jackal Workflows (all verified working ✅)**:
+| Action | Method | Endpoint | Body |
+|--------|--------|----------|------|
+| View Calendar | GET | `/webhook/jackal-calendar` | - |
+| Create Event | POST | `/webhook/jackal-calendar-create` | `{title, start, end}` |
+| Edit Event | POST | `/webhook/jackal-calendar-edit` | `{eventId, title?, start?, end?}` |
+| Delete Event | POST | `/webhook/jackal-calendar-delete` | `{eventId}` |
+| View Gmail | GET | `/webhook/jackal-gmail` | - (returns 25 recent emails) |
 
-**Key learnings** (see `memory/n8n-building-guide.md`):
-- Webhook body data is at `$json.body.fieldName` not `$json.fieldName`
+**Base URL**: `https://synlixa2.app.n8n.cloud`
+
+**Key config** (see `memory/n8n-building-guide.md`):
 - Calendar: `contact@synlixa.com`
-- Credential ID: `ldpoEmLmlkmQv7yj` (has read+write)
+- Gmail: `hung.d.phung1@gmail.com` (credential: `wblZcTHvkgkySzfJ`)
+- Calendar Credential ID: `ldpoEmLmlkmQv7yj` (has read+write)
+- Webhook body data is at `$json.body.fieldName` not `$json.fieldName`
 
 ---
 

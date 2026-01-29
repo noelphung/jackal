@@ -1,0 +1,16 @@
+
+# Secrets - NEVER COMMIT
+secrets.env
+*.secret
+*.key
+**/auth-profiles.json
+**/*token*
+**/*password*
+**/*credential*
+
+# Logs
+logs/
+*.log
+
+# Sensitive backups
+*_BACKUP.md

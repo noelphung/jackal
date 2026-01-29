@@ -1,0 +1,25 @@
+[Unit]
+Description=Clawdbot AI Assistant
+After=network.target
+
+[Service]
+Type=simple
+User=ubuntu
+WorkingDirectory=/home/ubuntu/clawd
+ExecStart=/home/ubuntu/.npm-global/bin/clawdbot gateway start --foreground
+Restart=always
+RestartSec=10
+StandardOutput=journal
+StandardError=journal
+
+# Security hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=read-only
+ReadWritePaths=/home/ubuntu/clawd /home/ubuntu/.clawdbot /tmp
+
+# Environment (keys loaded from secure file)
+EnvironmentFile=/home/ubuntu/.clawdbot/secrets.env
+
+[Install]
+WantedBy=multi-user.target
