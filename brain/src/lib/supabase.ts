@@ -1,63 +1,94 @@
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 
-export const supabase = createClient(supabaseUrl, supabaseKey)
+export const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
-export type Document = {
+// Types
+export interface Project {
   id: string
+  user_id: string
+  name: string
   slug: string
-  title: string
-  type: 'journal' | 'concept' | 'note' | 'project'
-  content: string
+  description?: string
+  status: 'active' | 'paused' | 'completed' | 'archived'
+  color: string
+  priority: number
+  due_date?: string
   tags: string[]
+  metadata: Record<string, unknown>
   created_at: string
   updated_at: string
 }
 
-export async function getDocuments(type?: string) {
-  let query = supabase.from('documents').select('*').order('updated_at', { ascending: false })
-  
-  if (type) {
-    query = query.eq('type', type)
-  }
-  
-  const { data, error } = await query
-  if (error) throw error
-  return data as Document[]
+export interface Task {
+  id: string
+  user_id: string
+  project_id?: string
+  title: string
+  description?: string
+  status: 'backlog' | 'todo' | 'in_progress' | 'review' | 'done' | 'archived'
+  priority: number
+  due_date?: string
+  estimated_hours?: number
+  actual_hours?: number
+  tags: string[]
+  metadata: Record<string, unknown>
+  completed_at?: string
+  created_at: string
+  updated_at: string
+  project?: Project
 }
 
-export async function getDocumentBySlug(slug: string) {
-  const { data, error } = await supabase
-    .from('documents')
-    .select('*')
-    .eq('slug', slug)
-    .single()
-  
-  if (error) throw error
-  return data as Document
+export interface ApiKey {
+  id: string
+  user_id: string
+  name: string
+  service: string
+  key_preview: string
+  is_active: boolean
+  last_used_at?: string
+  created_at: string
+  updated_at: string
 }
 
-export async function createDocument(doc: Omit<Document, 'id' | 'created_at' | 'updated_at'>) {
-  const { data, error } = await supabase
-    .from('documents')
-    .insert(doc)
-    .select()
-    .single()
-  
-  if (error) throw error
-  return data as Document
+export interface Setting {
+  id: string
+  user_id: string
+  key: string
+  value: Record<string, unknown>
+  created_at: string
+  updated_at: string
 }
 
-export async function updateDocument(id: string, updates: Partial<Document>) {
-  const { data, error } = await supabase
-    .from('documents')
-    .update({ ...updates, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select()
-    .single()
-  
-  if (error) throw error
-  return data as Document
+export interface ActivityLog {
+  id: string
+  user_id: string
+  action: string
+  entity_type: string
+  entity_id?: string
+  details: Record<string, unknown>
+  created_at: string
+}
+
+// Helper functions
+export async function getCurrentUser() {
+  const { data: { user } } = await supabase.auth.getUser()
+  return user
+}
+
+export async function signInWithEmail(email: string) {
+  const { data, error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${window.location.origin}/auth/callback`,
+    },
+  })
+  return { data, error }
+}
+
+export async function signOut() {
+  const { error } = await supabase.auth.signOut()
+  return { error }
 }
